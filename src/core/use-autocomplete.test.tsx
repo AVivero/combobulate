@@ -32,7 +32,12 @@ test("moveActive clamps within filtered bounds", () => {
 test("select (single) sets selectedItems and calls onChange", () => {
   let changed: unknown;
   const { result } = renderHook(() =>
-    useAutocomplete({ items: ITEMS, onChange: (v) => (changed = v) }),
+    useAutocomplete({
+      items: ITEMS,
+      onChange: (v) => {
+        changed = v;
+      },
+    }),
   );
   act(() => result.current.select("Madrid"));
   expect(result.current.selectedItems).toEqual(["Madrid"]);
