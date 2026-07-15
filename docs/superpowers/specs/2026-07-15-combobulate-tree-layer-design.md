@@ -25,9 +25,10 @@ remaining showcase scenarios. It delivers three independently-reviewable task gr
 - **B — Dynamic row heights:** a measured variable-height playground scenario + e2e. The
   `List` primitive already calls `virtualizer.measureElement`, so this is expected to be
   demo-only with **no core change**.
-- **C — Fuzzy + async:** wire the already-threaded `loading` option, add a headless
-  `aria-live` region (deferred from Plan 1; the natural home for loading/result-count
-  announcements), a Fuse.js fuzzy demo, and a remote/`loading` demo + e2e.
+- **C — Fuzzy + async:** add a generic `loading` option to the core (it was de-scoped in
+  Plan 1's `c6d43fa` as an unwired prop), add a headless `aria-live` region (deferred from
+  Plan 1; the natural home for loading/result-count announcements), a Fuse.js fuzzy demo, and
+  a remote/`loading` demo + e2e.
 
 ### The lego rule (unchanged, load-bearing)
 
@@ -35,7 +36,10 @@ The core stays tree-unaware. `expandedIds`, `depth`, `parentId`, and tree concep
 **nowhere** in the core's API, types, or tests. Nesting is composed from smaller pieces; the
 tree layer drives the core only through the core's public API. The **one** additive change to
 the core hook in this plan — the `aria-live` announcement string + `getLiveRegionProps()` — is
-generic (result counts, loading) and carries no tree awareness.
+The **two** additive changes to the core hook in this plan — a bulk
+`setSelectedItems` (enables aggregate "select all under node") and the `aria-live`
+announcement string + `getLiveRegionProps()` — are both generic (bulk selection,
+result counts, loading) and carry no tree awareness.
 
 ---
 
@@ -44,9 +48,10 @@ generic (result counts, loading) and carries no tree awareness.
 | Seam | Decision | Why |
 |---|---|---|
 | **Plan scope** | A + B + C in one plan, three task groups | Completes the design spec's tree + scenarios 2–4; groups stay independent via the lego boundary. |
-| **Filter ownership** | Lift `inputValue` into the composer; tree owns matches-plus-ancestors filtering + auto-expand; core filters pass-through | Tree-aware filtering can't live in the core; lifting the query keeps hook ordering clean and prevents orphaned matches. |
+| **Filter ownership** | Composer owns a `query` mirror (fed by the core's `onInputChange`); tree owns matches-plus-ancestors filtering + auto-expand; core filters pass-through | The core is uncontrolled (no controlled `inputValue`), so the composer mirrors the input via the synchronous `onInputChange` instead of controlling it — same intent, zero core change. Keeps hook ordering clean and prevents orphaned matches. |
 | **ARIA composition** | Tree primitives merge ARIA at render; `useTree` stays pure | Core file is never touched; all tree ARIA lives in the tree primitive. |
-| **Aggregate rows** | Included in Plan 2, as opt-in synthetic rows in the flat visible list | Because they are real entries in the flat list, virtualization / active-index nav / `aria-setsize`·`posinset` / `aria-activedescendant` all work for free. |
+| **Aggregate rows** | Included in Plan 2, as opt-in synthetic rows in the flat visible list; backed by a generic bulk `setSelectedItems` on the core | Rows are real entries in the flat list, so virtualization / active-index nav / `aria-setsize`·`posinset` / `aria-activedescendant` work for free; bulk selection is the one generic core capability they require. |
+| **Core additions** | Bulk `setSelectedItems` + headless live region — both generic, tree-unaware | The core only exposed single-item toggle `select()` and no announcement; these are additive and carry no tree concepts, so the lego boundary holds. |
 | **Live region** | Headless: core computes the announcement string; a `<LiveRegion>` primitive renders the node | Rounds out the a11y identity and feeds group C; additive and tree-unaware. |
 
 ---
@@ -101,8 +106,10 @@ node emits a synthetic first-child row:
   at the primitive layer (§3.6): its `onClick` calls `tree.toggleAllUnder(parentId)` instead
   of `combo.select`, and its checked state is derived.
 - `toggleAllUnder(nodeId)`: if the aggregate state is `checked` → remove all descendant leaves
-  from selection; otherwise → add all missing descendant leaves. Descendant-leaf ids come from
-  the memoized flatten, so it is O(subtree).
+  from selection; otherwise → add all missing descendant leaves. It computes the next selection
+  array and applies it via the core's bulk `combo.setSelectedItems(next)` (single update, single
+  `onChange`) — never by looping `select()`, which would toggle already-selected leaves off.
+  Descendant-leaf ids come from the memoized flatten, so it is O(subtree).
 - `getAggregateState(nodeId)`: `"checked"` (all descendant leaves selected) / `"indeterminate"`
   (some) / `"unchecked"` (none), derived from `combo.selectedItems`.
 
@@ -139,15 +146,19 @@ const [query, setQuery] = useState("");
 const tree = useTree({ nodes, getChildren, getItemId, query, aggregateSelectAll: true });
 const combo = useAutocompleteVirtual({
   items: tree.items,
-  inputValue: query,               // controlled: input lives in the composer
-  onInputChange: setQuery,
+  onInputChange: setQuery,         // composer mirrors the core's input text into `query`
   filterItems: (items) => items,   // pass-through: tree already filtered; core never re-filters
   multiple: true,                  // aggregate rows imply multi-select
 });
 ```
 
-- **Hook ordering:** `useTree` needs the query and `useAutocomplete*` needs `tree.items`;
-  lifting `inputValue` to the composer breaks the pull cleanly (both read the same `query`).
+- **The core is uncontrolled**, so the composer does not control `inputValue`. It keeps a
+  `query` mirror updated by the core's synchronous `onInputChange`. Because `onInputChange`
+  fires on every keystroke in the same event as the core's internal update, `query` and
+  `combo.inputValue` stay identical — the input's displayed text still comes from
+  `combo.getInputProps().value`.
+- **Hook ordering:** `useTree` needs the query and `useAutocomplete*` needs `tree.items`; the
+  composer's `query` mirror breaks the pull cleanly (both read the same `query`).
 - **`←`/`→` composition:** `tree.composeKeyDown(combo.getInputProps().onKeyDown)` returns a
   merged handler (tree handles `←`/`→` with `preventDefault`; core handles `↑`/`↓`/Enter/Escape).
   Passed as the input's `onKeyDown` prop, it overrides the base getter's handler with the
@@ -212,7 +223,15 @@ JS-driven `:hover`.
 
 ---
 
-## 4. Core additive change — headless `aria-live` region
+## 4. Core additive changes (generic, tree-unaware)
+
+### 4.1 Bulk `setSelectedItems`
+
+`useAutocomplete` gains `setSelectedItems(items: T[]): void` on `AutocompleteApi` — replaces the
+selection wholesale and fires `onChange` once. It is the one generic capability aggregate rows
+need (the existing `select()` only toggles a single item). Carries no tree awareness.
+
+### 4.2 Headless `aria-live` region
 
 The core is headless, so the region is split: **core computes the announcement string as
 state; a primitive renders the node.** This is additive and tree-unaware.
@@ -245,8 +264,8 @@ variable content (multi-line labels), with `estimateSize` as a rough guess, rely
 - **Fuzzy demo** `data-testid="fuzzy"`: `<Autocomplete filterItems={fuseMatcher}>` with Fuse.js
   in the **playground only** (Fuse is a playground devDep, never a library dependency — proving
   `filterItems` is a real injection point).
-- **Async demo** `data-testid="async"`: a simulated remote source driving `loading` +
-  `onInputChange`, with items controlled from outside. `<LiveRegion>` announces `"Loading…"` →
+- **Async demo** `data-testid="async"`: a simulated remote source driving the new `loading`
+  option + `onInputChange`, with items controlled from outside. `<LiveRegion>` announces `"Loading…"` →
   `"N results"`. The preset exposes a spinner slot that reads the core's `loading`.
 - **e2e:** typing triggers `loading`, then settles to results; the live-region text transitions
   are asserted.
@@ -263,8 +282,8 @@ variable content (multi-line labels), with `estimateSize` as a rough guess, rely
 - **Tree primitives unit:** `role="tree"` / `role="treeitem"`; `aria-level` / `aria-expanded`;
   `data-depth` / `data-expanded`; chevron toggles expansion without selecting; aggregate row
   `aria-checked="mixed"`.
-- **Core additive unit:** `announcement` string transitions (count / no-results / loading) +
-  `getLiveRegionProps`.
+- **Core additive unit:** bulk `setSelectedItems` (replaces selection, fires `onChange` once);
+  `announcement` string transitions (count / no-results / loading) + `getLiveRegionProps`.
 - **Core regression guard:** the existing 29 core tests stay green and still never reference
   expansion.
 - **E2E (Playwright):** nested-tree keyboard + ARIA (`role="tree"`/`treeitem`, `aria-level`,
@@ -288,7 +307,7 @@ variable content (multi-line labels), with `estimateSize` as a rough guess, rely
 - **Hook:** `useTree<T>(options): TreeApi<T>` (+ `TreeApi`, `TreeRow`, `UseTreeOptions` types).
 - **Primitives:** `<Combobulate.Tree>`, `<Combobulate.TreeItem>`, `<Combobulate.LiveRegion>`.
 - **Preset:** `<NestedAutocomplete<T> ... />` (+ `NestedAutocompleteProps`).
-- **Core additive:** `AutocompleteApi.announcement`, `AutocompleteApi.getLiveRegionProps`.
+- **Core additive:** `UseAutocompleteOptions.loading`, `AutocompleteApi.setSelectedItems`, `AutocompleteApi.announcement`, `AutocompleteApi.getLiveRegionProps`.
 
 ## 10. Known follow-ups (out of scope for Plan 2)
 
