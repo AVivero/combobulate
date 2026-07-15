@@ -1,53 +1,22 @@
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useAutocompleteVirtual } from "../core/use-autocomplete-virtual";
+import { stubElementLayout } from "../test-utils/stub-element-layout";
 import { Combobulate } from "./combobulate";
 
 const ITEMS = ["Paris", "Madrid", "Berlin"];
 
-// happy-dom has no real layout engine: every element reports 0 for
-// offsetWidth/offsetHeight (and getBoundingClientRect), regardless of CSS.
-// TanStack Virtual's `calculateRange` treats a zero-size scroll container as
-// "nothing is visible" and short-circuits to an empty range, so any test in
-// this file that renders a virtualized list would otherwise see zero rows no
-// matter how many items are provided. Stub non-zero dimensions on
-// `HTMLElement.prototype` for the lifetime of this file's tests only (via
-// `beforeAll`/`afterAll`), restoring the original descriptors afterward so
-// no other test file is affected by the stub.
-const STUBBED_ELEMENT_SIZE_PX = 300;
-
-let originalOffsetHeight: PropertyDescriptor | undefined;
-let originalOffsetWidth: PropertyDescriptor | undefined;
+// See `stubElementLayout` for why virtualized lists need this under
+// happy-dom. Installed for the lifetime of this file's tests only (via
+// `beforeAll`/`afterAll`) so no other test file is affected by the stub.
+let restoreElementLayout: () => void;
 
 beforeAll(() => {
-  originalOffsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight");
-  originalOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetWidth");
-
-  Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
-    configurable: true,
-    get() {
-      return STUBBED_ELEMENT_SIZE_PX;
-    },
-  });
-  Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
-    configurable: true,
-    get() {
-      return STUBBED_ELEMENT_SIZE_PX;
-    },
-  });
+  restoreElementLayout = stubElementLayout();
 });
 
 afterAll(() => {
-  if (originalOffsetHeight) {
-    Object.defineProperty(HTMLElement.prototype, "offsetHeight", originalOffsetHeight);
-  } else {
-    Reflect.deleteProperty(HTMLElement.prototype, "offsetHeight");
-  }
-  if (originalOffsetWidth) {
-    Object.defineProperty(HTMLElement.prototype, "offsetWidth", originalOffsetWidth);
-  } else {
-    Reflect.deleteProperty(HTMLElement.prototype, "offsetWidth");
-  }
+  restoreElementLayout();
 });
 
 // `@testing-library/react`'s built-in auto-cleanup only registers itself

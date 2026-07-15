@@ -1,0 +1,35 @@
+.cbl-root {
+  position: relative;
+  font-family: system-ui, sans-serif;
+}
+
+.cbl-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.cbl-option {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+/*
+ * `data-active`/`data-selected` are set by `getItemProps` on the Item
+ * WRAPPER div (see `Combobulate.Item`), while `.cbl-option` is a child of
+ * that wrapper — so these must be descendant selectors, not attribute
+ * selectors on `.cbl-option` itself.
+ */
+[data-active] .cbl-option {
+  background: #e2e8f0;
+}
+
+[data-selected] .cbl-option {
+  font-weight: 600;
+}
+
+.cbl-empty {
+  padding: 8px 12px;
+  color: #64748b;
+}

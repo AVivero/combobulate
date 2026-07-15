@@ -12,3 +12,5 @@ export type {
   CombobulateListProps,
   CombobulateRootProps,
 } from "./primitives/combobulate";
+export { Autocomplete } from "./presets/autocomplete";
+export type { AutocompleteProps } from "./presets/autocomplete";
