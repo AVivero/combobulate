@@ -57,6 +57,16 @@ test("toggle flips expansion and notifies onExpandedChange", () => {
   expect(last?.has("veg")).toBe(true);
 });
 
+test("successive expand calls in one batch are not lost", () => {
+  const { result } = renderHook(() => useTree(base));
+  act(() => {
+    result.current.expand("fruit");
+    result.current.expand("veg");
+  });
+  expect(result.current.expandedIds.has("fruit")).toBe(true);
+  expect(result.current.expandedIds.has("veg")).toBe(true);
+});
+
 test("controlled expandedIds ignores internal toggle", () => {
   const { result } = renderHook(() => useTree({ ...base, expandedIds: ["fruit"] }));
   expect(result.current.rows.map((r) => r.id)).toEqual(["fruit", "apple", "citrus", "veg"]);

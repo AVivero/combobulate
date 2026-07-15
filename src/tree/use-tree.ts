@@ -43,16 +43,17 @@ export function useTree<T>(options: UseTreeOptions<T>): TreeApi<T> {
 
   const items = useMemo(() => rows.map((r) => r.item), [rows]);
 
+  const expandedRef = useRef(expandedIds);
+  expandedRef.current = expandedIds;
+
   const applyExpanded = useCallback(
     (next: Set<string>) => {
+      expandedRef.current = next;
       if (!isControlled) setUncontrolled(next);
       onExpandedChange?.(next);
     },
     [isControlled, onExpandedChange],
   );
-
-  const expandedRef = useRef(expandedIds);
-  expandedRef.current = expandedIds;
 
   const expand = useCallback(
     (id: string) => {
