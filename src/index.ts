@@ -1,3 +1,8 @@
 export { VERSION } from "./internal/version";
 export { useAutocomplete } from "./core/use-autocomplete";
 export type { AutocompleteApi, UseAutocompleteOptions } from "./core/types";
+export { useAutocompleteVirtual } from "./core/use-autocomplete-virtual";
+export type {
+  AutocompleteVirtualApi,
+  UseAutocompleteVirtualOptions,
+} from "./core/use-autocomplete-virtual";
