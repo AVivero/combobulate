@@ -28,7 +28,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [inputValue, setInputValueState] = useState("");
   const [activeIndex, setActiveIndexState] = useState(-1);
-  const [selectedItems, setSelectedItems] = useState<T[]>(() =>
+  const [selectedItems, setSelectedItemsState] = useState<T[]>(() =>
     defaultValue == null ? [] : Array.isArray(defaultValue) ? defaultValue : [defaultValue],
   );
 
@@ -73,7 +73,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
 
   const select = useCallback(
     (item: T) => {
-      setSelectedItems((prev) => {
+      setSelectedItemsState((prev) => {
         let next: T[];
         if (multiple) {
           next = prev.some((i) => isSameItem(i, item, getItemId))
@@ -87,6 +87,14 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
       });
     },
     [multiple, onChange, getItemId],
+  );
+
+  const setSelectedItems = useCallback(
+    (next: T[]) => {
+      setSelectedItemsState(next);
+      onChange?.(multiple ? next : (next[0] ?? null));
+    },
+    [multiple, onChange],
   );
 
   const isSelected = useCallback(
@@ -127,6 +135,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     moveActive,
     selectedItems,
     select,
+    setSelectedItems,
     getItemId: getItemIdCb,
     listId,
     ...getters,

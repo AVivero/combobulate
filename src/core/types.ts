@@ -50,6 +50,8 @@ export interface AutocompleteApi<T> {
   moveActive: (delta: number) => void;
   selectedItems: T[];
   select: (item: T) => void;
+  /** Replace the entire selection in one update. Fires `onChange` once. */
+  setSelectedItems: (items: T[]) => void;
   /**
    * Resolve an item's **logical** id (the caller's `getItemId` accessor, or
    * the item's positional index as a fallback). This is not the rendered DOM

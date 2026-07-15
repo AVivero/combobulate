@@ -81,6 +81,25 @@ test("select uses id-based identity for object items with getItemId, so a fresh 
   expect(result.current.getItemProps(freshA, 0)["aria-selected"]).toBe(false);
 });
 
+test("setSelectedItems replaces selection wholesale and fires onChange once", () => {
+  let changed: unknown;
+  let calls = 0;
+  const { result } = renderHook(() =>
+    useAutocomplete({
+      items: ITEMS,
+      multiple: true,
+      onChange: (v) => {
+        changed = v;
+        calls += 1;
+      },
+    }),
+  );
+  act(() => result.current.setSelectedItems(["Paris", "Madrid"]));
+  expect(result.current.selectedItems).toEqual(["Paris", "Madrid"]);
+  expect(changed).toEqual(["Paris", "Madrid"]);
+  expect(calls).toBe(1);
+});
+
 test("debounce delays filtering", async () => {
   const { result } = renderHook(() => useAutocomplete({ items: ITEMS, debounce: 50 }));
   act(() => result.current.setInputValue("ma"));
