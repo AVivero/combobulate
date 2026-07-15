@@ -100,6 +100,25 @@ test("setSelectedItems replaces selection wholesale and fires onChange once", ()
   expect(calls).toBe(1);
 });
 
+test("setSelectedItems clamps to single-select invariant", () => {
+  let changed: unknown;
+  let calls = 0;
+  const { result } = renderHook(() =>
+    useAutocomplete({
+      items: ITEMS,
+      multiple: false,
+      onChange: (v) => {
+        changed = v;
+        calls += 1;
+      },
+    }),
+  );
+  act(() => result.current.setSelectedItems(["Paris", "Madrid"]));
+  expect(result.current.selectedItems).toEqual(["Paris"]);
+  expect(changed).toBe("Paris");
+  expect(calls).toBe(1);
+});
+
 test("debounce delays filtering", async () => {
   const { result } = renderHook(() => useAutocomplete({ items: ITEMS, debounce: 50 }));
   act(() => result.current.setInputValue("ma"));

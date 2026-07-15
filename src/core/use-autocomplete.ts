@@ -4,6 +4,10 @@ import { createPropGetters } from "./prop-getters";
 import type { AutocompleteApi, UseAutocompleteOptions } from "./types";
 import { useDebouncedValue } from "./use-debounced-value";
 
+function toChangeValue<T>(items: T[], multiple: boolean): T | T[] | null {
+  return multiple ? items : (items[0] ?? null);
+}
+
 /**
  * Headless state machine for a linear (non-nested) autocomplete/combobox.
  * Owns open state, input text, the active descendant index, filtering, and
@@ -82,7 +86,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
         } else {
           next = [item];
         }
-        onChange?.(multiple ? next : (next[0] ?? null));
+        onChange?.(toChangeValue(next, multiple));
         return next;
       });
     },
@@ -91,8 +95,9 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
 
   const setSelectedItems = useCallback(
     (next: T[]) => {
-      setSelectedItemsState(next);
-      onChange?.(multiple ? next : (next[0] ?? null));
+      const clamped = multiple ? [...next] : next.slice(0, 1);
+      setSelectedItemsState(clamped);
+      onChange?.(toChangeValue(clamped, multiple));
     },
     [multiple, onChange],
   );
