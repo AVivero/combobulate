@@ -6,3 +6,9 @@ export type {
   AutocompleteVirtualApi,
   UseAutocompleteVirtualOptions,
 } from "./core/use-autocomplete-virtual";
+export { Combobulate } from "./primitives/combobulate";
+export type {
+  CombobulateItemProps,
+  CombobulateListProps,
+  CombobulateRootProps,
+} from "./primitives/combobulate";
