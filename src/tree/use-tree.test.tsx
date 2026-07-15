@@ -146,3 +146,66 @@ test("non-arrow keys delegate to the core handler", () => {
   act(() => result.current.composeKeyDown(combo as never)(key("Enter")));
   expect(calls.coreKeys).toEqual(["Enter"]);
 });
+
+function selectionCombo(initial: Node[]) {
+  const state = { selectedItems: initial };
+  const combo = {
+    activeIndex: -1,
+    setActiveIndex: () => {},
+    selectedItems: state.selectedItems,
+    setSelectedItems: (next: Node[]) => {
+      state.selectedItems = next;
+      combo.selectedItems = next;
+    },
+    getInputProps: () => ({ onKeyDown: () => {} }),
+  };
+  return combo;
+}
+
+// Look up a fixture node by id, returning the same object reference that
+// appears in TREE (avoids non-null assertions under noUncheckedIndexedAccess).
+function findNode(nodes: Node[], id: string): Node | undefined {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    if (node.children) {
+      const found = findNode(node.children, id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+function getNode(id: string): Node {
+  const found = findNode(TREE, id);
+  if (!found) throw new Error(`fixture node not found: ${id}`);
+  return found;
+}
+
+const apple = getNode("apple");
+const orange = getNode("orange");
+const carrot = getNode("carrot");
+
+test("getAggregateState reflects descendant-leaf selection", () => {
+  const { result } = renderHook(() => useTree({ ...base, aggregateSelectAll: true }));
+  const none = selectionCombo([]);
+  expect(result.current.getAggregateState(none as never, "fruit")).toBe("unchecked");
+  const some = selectionCombo([apple]);
+  expect(result.current.getAggregateState(some as never, "fruit")).toBe("indeterminate");
+  const all = selectionCombo([apple, orange]);
+  expect(result.current.getAggregateState(all as never, "fruit")).toBe("checked");
+});
+
+test("toggleAllUnder adds all missing descendant leaves", () => {
+  const { result } = renderHook(() => useTree({ ...base, aggregateSelectAll: true }));
+  const combo = selectionCombo([]);
+  act(() => result.current.toggleAllUnder(combo as never, "fruit"));
+  expect(combo.selectedItems.map((n) => n.id).sort()).toEqual(["apple", "orange"]);
+});
+
+test("toggleAllUnder clears descendant leaves when already fully selected", () => {
+  const { result } = renderHook(() => useTree({ ...base, aggregateSelectAll: true }));
+  const combo = selectionCombo([apple, orange, carrot]);
+  act(() => result.current.toggleAllUnder(combo as never, "fruit"));
+  // fruit's leaves removed; carrot (under veg) untouched
+  expect(combo.selectedItems.map((n) => n.id)).toEqual(["carrot"]);
+});

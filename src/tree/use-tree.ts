@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { defaultGetSearchText } from "../core/item-utils";
-import { computeVisibleRows, flattenTree } from "./tree-utils";
+import { collectDescendantLeafIds, computeVisibleRows, flattenTree } from "./tree-utils";
 import type { TreeApi, TreeCombo, TreeRow, UseTreeOptions } from "./types";
 
 /**
@@ -35,6 +35,9 @@ export function useTree<T>(options: UseTreeOptions<T>): TreeApi<T> {
     () => flattenTree(nodes, getChildren, getItemId),
     [nodes, getChildren, getItemId],
   );
+
+  const flatRef = useRef(flat);
+  flatRef.current = flat;
 
   const rows = useMemo<TreeRow<T>[]>(
     () => computeVisibleRows(flat, expandedIds, query, getSearchText),
@@ -111,11 +114,35 @@ export function useTree<T>(options: UseTreeOptions<T>): TreeApi<T> {
     [expand, collapse],
   );
 
-  // Aggregate helpers are implemented in a later task; stub for now.
-  const toggleAllUnder = useCallback<TreeApi<T>["toggleAllUnder"]>(() => {}, []);
   const getAggregateState = useCallback<TreeApi<T>["getAggregateState"]>(
-    () => "unchecked" as const,
-    [],
+    (combo, nodeId) => {
+      const leafIds = collectDescendantLeafIds(flatRef.current, nodeId);
+      if (leafIds.length === 0) return "unchecked";
+      const selectedIds = new Set(combo.selectedItems.map((item) => getItemId(item)));
+      const selectedCount = leafIds.filter((id) => selectedIds.has(id)).length;
+      if (selectedCount === 0) return "unchecked";
+      if (selectedCount === leafIds.length) return "checked";
+      return "indeterminate";
+    },
+    [getItemId],
+  );
+
+  const toggleAllUnder = useCallback<TreeApi<T>["toggleAllUnder"]>(
+    (combo, nodeId) => {
+      const leafIds = new Set(collectDescendantLeafIds(flatRef.current, nodeId));
+      if (leafIds.size === 0) return;
+      const state = getAggregateState(combo, nodeId);
+      if (state === "checked") {
+        combo.setSelectedItems(combo.selectedItems.filter((item) => !leafIds.has(getItemId(item))));
+      } else {
+        const selectedIds = new Set(combo.selectedItems.map((item) => getItemId(item)));
+        const additions = flatRef.current
+          .filter((f) => leafIds.has(f.id) && !selectedIds.has(f.id))
+          .map((f) => f.item);
+        combo.setSelectedItems([...combo.selectedItems, ...additions]);
+      }
+    },
+    [getItemId, getAggregateState],
   );
 
   return {
