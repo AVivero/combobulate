@@ -18,7 +18,10 @@ export interface UseAutocompleteOptions<T> {
   onChange?: (value: T | T[] | null) => void;
   /** Controlled input text. */
   inputValue?: string;
-  /** Fired on every input change (post-debounce if `debounce` set). */
+  /**
+   * Fired synchronously on every input change. Note this is independent of
+   * `debounce`, which only delays when `filteredItems` recomputes.
+   */
   onInputChange?: (value: string) => void;
   /** Controlled open state. */
   open?: boolean;
