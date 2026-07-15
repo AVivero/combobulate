@@ -34,3 +34,28 @@ test("moving active index requests scrollToIndex", () => {
 
   expect(calls).toContain(500);
 });
+
+test("bridge stays quiet when closed or when nothing is highlighted", () => {
+  // Case 1: opening while nothing is highlighted (activeIndex === -1) must not
+  // scroll — this is exactly what the `activeIndex >= 0` guard protects against.
+  const a = renderHook(() => useAutocompleteVirtual({ items: ITEMS, estimateSize: () => 32 }));
+  const callsA: number[] = [];
+  a.result.current.virtualizer.scrollToIndex = ((i: number) => {
+    callsA.push(i);
+  }) as typeof a.result.current.virtualizer.scrollToIndex;
+  act(() => {
+    a.result.current.open();
+  });
+  expect(callsA).toEqual([]);
+
+  // Case 2: navigating while the list is closed must not scroll.
+  const b = renderHook(() => useAutocompleteVirtual({ items: ITEMS, estimateSize: () => 32 }));
+  const callsB: number[] = [];
+  b.result.current.virtualizer.scrollToIndex = ((i: number) => {
+    callsB.push(i);
+  }) as typeof b.result.current.virtualizer.scrollToIndex;
+  act(() => {
+    b.result.current.setActiveIndex(300);
+  });
+  expect(callsB).toEqual([]);
+});
