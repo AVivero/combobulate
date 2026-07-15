@@ -32,3 +32,8 @@ test("defaultFilterItems returns all items for empty query", () => {
   const items = ["A", "B"];
   expect(defaultFilterItems(items, "", (s) => s)).toEqual(["A", "B"]);
 });
+
+test("defaultFilterItems returns all items for a whitespace-only query", () => {
+  const items = ["A", "B"];
+  expect(defaultFilterItems(items, "   ", (s) => s)).toEqual(["A", "B"]);
+});

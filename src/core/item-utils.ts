@@ -31,14 +31,27 @@ export function resolveItemId<T>(item: T, index: number, getItemId?: (item: T) =
 
 /**
  * Default filter: keep items whose normalized search text contains the
- * normalized query as a substring. An empty query keeps everything.
+ * normalized query as a substring. An empty (or whitespace-only) query keeps
+ * everything.
  */
 export function defaultFilterItems<T>(
   items: T[],
   query: string,
   getSearchText: (item: T) => string,
 ): T[] {
-  const q = normalizeText(query);
+  const q = normalizeText(query).trim();
   if (q.length === 0) return items;
   return items.filter((item) => normalizeText(getSearchText(item)).includes(q));
+}
+
+/**
+ * Identity comparison for selection. Uses the caller's `getItemId` accessor
+ * when provided so logically-equal items (e.g. objects re-fetched from an
+ * API) are recognized as the same selection even across fresh references.
+ * Falls back to reference equality, which is correct for string/primitive
+ * items and for callers who don't supply `getItemId`.
+ */
+export function isSameItem<T>(a: T, b: T, getItemId?: (item: T) => string): boolean {
+  if (getItemId) return getItemId(a) === getItemId(b);
+  return a === b;
 }

@@ -7,7 +7,8 @@ export interface PropGetterState<T> {
   inputValue: string;
   activeIndex: number;
   filteredItems: T[];
-  selectedItems: T[];
+  /** Identity-aware selection predicate (id-based when `getItemId` is provided, else reference equality). */
+  isSelected: (item: T) => boolean;
   getItemId: (item: T, index: number) => string;
   setInputValue: (v: string) => void;
   setActiveIndex: (i: number) => void;
@@ -66,7 +67,6 @@ export function createPropGetters<T>(state: PropGetterState<T>) {
   };
 
   return {
-    getRootProps: () => ({ role: "combobox" as const, "aria-expanded": state.isOpen }),
     getInputProps: () => ({
       role: "combobox" as const,
       "aria-controls": state.listId,
@@ -83,7 +83,7 @@ export function createPropGetters<T>(state: PropGetterState<T>) {
     getListProps: () => ({ id: state.listId, role: "listbox" as const }),
     getItemProps: (item: T, index: number) => {
       const isActive = index === state.activeIndex;
-      const isSelected = state.selectedItems.includes(item);
+      const isSelected = state.isSelected(item);
       return {
         id: domId(item, index),
         role: "option" as const,

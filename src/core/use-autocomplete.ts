@@ -1,5 +1,5 @@
 import { useCallback, useId, useMemo, useRef, useState } from "react";
-import { defaultFilterItems, defaultGetSearchText, resolveItemId } from "./item-utils";
+import { defaultFilterItems, defaultGetSearchText, isSameItem, resolveItemId } from "./item-utils";
 import { createPropGetters } from "./prop-getters";
 import type { AutocompleteApi, UseAutocompleteOptions } from "./types";
 import { useDebouncedValue } from "./use-debounced-value";
@@ -53,6 +53,8 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
   const setInputValue = useCallback(
     (value: string) => {
       setInputValueState(value);
+      // Deliberate: re-highlight the first result on every keystroke so a
+      // quick Enter after typing selects the top match.
       setActiveIndexState(0);
       onInputChange?.(value);
     },
@@ -74,7 +76,9 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
       setSelectedItems((prev) => {
         let next: T[];
         if (multiple) {
-          next = prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item];
+          next = prev.some((i) => isSameItem(i, item, getItemId))
+            ? prev.filter((i) => !isSameItem(i, item, getItemId))
+            : [...prev, item];
         } else {
           next = [item];
         }
@@ -82,7 +86,12 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
         return next;
       });
     },
-    [multiple, onChange],
+    [multiple, onChange, getItemId],
+  );
+
+  const isSelected = useCallback(
+    (item: T) => selectedItems.some((i) => isSameItem(i, item, getItemId)),
+    [selectedItems, getItemId],
   );
 
   const getItemIdCb = useCallback(
@@ -96,7 +105,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     inputValue,
     activeIndex,
     filteredItems,
-    selectedItems,
+    isSelected,
     getItemId: getItemIdCb,
     setInputValue,
     setActiveIndex,

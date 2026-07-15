@@ -53,6 +53,34 @@ test("select (multiple) accumulates and toggles", () => {
   expect(result.current.selectedItems).toEqual(["Paris"]);
 });
 
+test("select uses id-based identity for object items with getItemId, so a fresh equal reference toggles it off", () => {
+  type City = { id: string; label: string };
+  const a: City = { id: "a", label: "A" };
+  const b: City = { id: "b", label: "B" };
+  const { result } = renderHook(() =>
+    useAutocomplete<City>({
+      items: [a, b],
+      multiple: true,
+      getItemId: (item) => item.id,
+      getSearchText: (item) => item.label,
+    }),
+  );
+
+  act(() => result.current.select(a));
+  expect(result.current.selectedItems).toEqual([a]);
+
+  // A fresh object reference that is logically equal (same id) to `a`.
+  const freshA: City = { id: "a", label: "A" };
+  expect(freshA).not.toBe(a);
+
+  // aria-selected must reflect id-based identity, not reference identity.
+  expect(result.current.getItemProps(freshA, 0)["aria-selected"]).toBe(true);
+
+  act(() => result.current.select(freshA));
+  expect(result.current.selectedItems).toEqual([]);
+  expect(result.current.getItemProps(freshA, 0)["aria-selected"]).toBe(false);
+});
+
 test("debounce delays filtering", async () => {
   const { result } = renderHook(() => useAutocomplete({ items: ITEMS, debounce: 50 }));
   act(() => result.current.setInputValue("ma"));

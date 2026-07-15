@@ -1,6 +1,13 @@
 import type { KeyboardEvent } from "react";
 
-/** Options accepted by {@link useAutocomplete}. Deliberately tree-unaware. */
+/**
+ * Options accepted by {@link useAutocomplete}. Deliberately tree-unaware.
+ *
+ * This hook is **uncontrolled**: selection, input text, and open state are
+ * owned internally and surfaced via `onChange`/`onInputChange`/`onOpenChange`
+ * callbacks plus `default*` seed values. Controlled `value`, `inputValue`,
+ * and `open` props are not yet supported (planned for a later release).
+ */
 export interface UseAutocompleteOptions<T> {
   /** Full list of items to search over. */
   items: T[];
@@ -10,21 +17,15 @@ export interface UseAutocompleteOptions<T> {
   getItemId?: (item: T) => string;
   /** Custom filter. Defaults to a normalized substring match. */
   filterItems?: (items: T[], query: string) => T[];
-  /** Controlled selection. */
-  value?: T | T[] | null;
   /** Initial selection for the uncontrolled case. */
   defaultValue?: T | T[] | null;
   /** Fired when selection changes. */
   onChange?: (value: T | T[] | null) => void;
-  /** Controlled input text. */
-  inputValue?: string;
   /**
    * Fired synchronously on every input change. Note this is independent of
    * `debounce`, which only delays when `filteredItems` recomputes.
    */
   onInputChange?: (value: string) => void;
-  /** Controlled open state. */
-  open?: boolean;
   /** Initial open state for the uncontrolled case. */
   defaultOpen?: boolean;
   /** Fired when open state changes. */
@@ -33,8 +34,6 @@ export interface UseAutocompleteOptions<T> {
   multiple?: boolean;
   /** Debounce (ms) applied to filtering. Default 0 (off). */
   debounce?: number;
-  /** External loading flag for async data. */
-  loading?: boolean;
 }
 
 /** Public API returned by {@link useAutocomplete}. */
@@ -51,11 +50,15 @@ export interface AutocompleteApi<T> {
   moveActive: (delta: number) => void;
   selectedItems: T[];
   select: (item: T) => void;
+  /**
+   * Resolve an item's **logical** id (the caller's `getItemId` accessor, or
+   * the item's positional index as a fallback). This is not the rendered DOM
+   * id: `getItemProps`/`getInputProps` namespace it as `${listId}-${logicalId}`
+   * so multiple combobox instances on one page never collide.
+   */
   getItemId: (item: T, index: number) => string;
   /** Stable id of the listbox element, used to wire `aria-controls`/`aria-activedescendant`. */
   listId: string;
-  /** Props for the element that owns the combobox widget (typically a wrapper `div`). */
-  getRootProps: () => { role: "combobox"; "aria-expanded": boolean };
   /** Props for the text input, including ARIA wiring and keyboard navigation. */
   getInputProps: () => {
     role: "combobox";
