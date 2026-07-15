@@ -18,9 +18,17 @@ export interface PropGetterState<T> {
 
 /** Build the prop-getter functions bound to the given state. */
 export function createPropGetters<T>(state: PropGetterState<T>) {
+  /**
+   * The DOM id for an item row. Namespaced with the instance `listId` so that
+   * multiple comboboxes on one page never produce colliding ids (which would
+   * make `aria-activedescendant` ambiguous). Used for both the item's `id` and
+   * the input's `aria-activedescendant`, keeping the two in sync.
+   */
+  const domId = (item: T, index: number) => `${state.listId}-${state.getItemId(item, index)}`;
+
   const activeId =
     state.isOpen && state.filteredItems[state.activeIndex] !== undefined
-      ? state.getItemId(state.filteredItems[state.activeIndex] as T, state.activeIndex)
+      ? domId(state.filteredItems[state.activeIndex] as T, state.activeIndex)
       : undefined;
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -77,7 +85,7 @@ export function createPropGetters<T>(state: PropGetterState<T>) {
       const isActive = index === state.activeIndex;
       const isSelected = state.selectedItems.includes(item);
       return {
-        id: state.getItemId(item, index),
+        id: domId(item, index),
         role: "option" as const,
         "aria-selected": isSelected,
         "aria-setsize": state.filteredItems.length,
