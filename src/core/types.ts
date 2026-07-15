@@ -1,3 +1,5 @@
+import type { KeyboardEvent } from "react";
+
 /** Options accepted by {@link useAutocomplete}. Deliberately tree-unaware. */
 export interface UseAutocompleteOptions<T> {
   /** Full list of items to search over. */
@@ -47,4 +49,36 @@ export interface AutocompleteApi<T> {
   selectedItems: T[];
   select: (item: T) => void;
   getItemId: (item: T, index: number) => string;
+  /** Stable id of the listbox element, used to wire `aria-controls`/`aria-activedescendant`. */
+  listId: string;
+  /** Props for the element that owns the combobox widget (typically a wrapper `div`). */
+  getRootProps: () => { role: "combobox"; "aria-expanded": boolean };
+  /** Props for the text input, including ARIA wiring and keyboard navigation. */
+  getInputProps: () => {
+    role: "combobox";
+    "aria-controls": string;
+    "aria-expanded": boolean;
+    "aria-activedescendant": string | undefined;
+    value: string;
+    onChange: (e: { target: { value: string } }) => void;
+    onKeyDown: (event: KeyboardEvent) => void;
+    onFocus: () => void;
+  };
+  /** Props for the listbox element. */
+  getListProps: () => { id: string; role: "listbox" };
+  /** Props for a single option element. */
+  getItemProps: (
+    item: T,
+    index: number,
+  ) => {
+    id: string;
+    role: "option";
+    "aria-selected": boolean;
+    "aria-setsize": number;
+    "aria-posinset": number;
+    "data-active": "" | undefined;
+    "data-selected": "" | undefined;
+    onClick: () => void;
+    onPointerMove: () => void;
+  };
 }

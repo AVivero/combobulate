@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { defaultFilterItems, defaultGetSearchText, resolveItemId } from "./item-utils";
+import { createPropGetters } from "./prop-getters";
 import type { AutocompleteApi, UseAutocompleteOptions } from "./types";
 import { useDebouncedValue } from "./use-debounced-value";
 
@@ -23,6 +24,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     debounce = 0,
   } = options;
 
+  const listId = useId();
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [inputValue, setInputValueState] = useState("");
   const [activeIndex, setActiveIndexState] = useState(-1);
@@ -88,6 +90,21 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     [getItemId],
   );
 
+  const getters = createPropGetters({
+    isOpen,
+    listId,
+    inputValue,
+    activeIndex,
+    filteredItems,
+    selectedItems,
+    getItemId: getItemIdCb,
+    setInputValue,
+    setActiveIndex,
+    moveActive,
+    setOpen,
+    select,
+  });
+
   return {
     isOpen,
     open: () => setOpen(true),
@@ -102,5 +119,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     selectedItems,
     select,
     getItemId: getItemIdCb,
+    listId,
+    ...getters,
   };
 }
