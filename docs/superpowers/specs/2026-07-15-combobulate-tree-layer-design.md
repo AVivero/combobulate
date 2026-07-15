@@ -50,7 +50,7 @@ result counts, loading) and carry no tree awareness.
 | **Plan scope** | A + B + C in one plan, three task groups | Completes the design spec's tree + scenarios 2–4; groups stay independent via the lego boundary. |
 | **Filter ownership** | Composer owns a `query` mirror (fed by the core's `onInputChange`); tree owns matches-plus-ancestors filtering + auto-expand; core filters pass-through | The core is uncontrolled (no controlled `inputValue`), so the composer mirrors the input via the synchronous `onInputChange` instead of controlling it — same intent, zero core change. Keeps hook ordering clean and prevents orphaned matches. |
 | **ARIA composition** | Tree primitives merge ARIA at render; `useTree` stays pure | Core file is never touched; all tree ARIA lives in the tree primitive. |
-| **Aggregate rows** | Included in Plan 2, as opt-in synthetic rows in the flat visible list; backed by a generic bulk `setSelectedItems` on the core | Rows are real entries in the flat list, so virtualization / active-index nav / `aria-setsize`·`posinset` / `aria-activedescendant` work for free; bulk selection is the one generic core capability they require. |
+| **Aggregate "select all"** | Included in Plan 2, as an opt-in tri-state affordance rendered within each expandable parent `treeitem` (not a synthetic list row); backed by a generic bulk `setSelectedItems` on the core | Keeps the core parameterized over the real item type `T` (`items: T[]`) — no marker/fake items poison `getItemId`/`select`/`selectedItems`; bulk selection is the one generic core capability the feature requires. |
 | **Core additions** | Bulk `setSelectedItems` + headless live region — both generic, tree-unaware | The core only exposed single-item toggle `select()` and no announcement; these are additive and carry no tree concepts, so the lego boundary holds. |
 | **Live region** | Headless: core computes the announcement string; a `<LiveRegion>` primitive renders the node | Rounds out the a11y identity and feeds group C; additive and tree-unaware. |
 
@@ -82,7 +82,7 @@ useTree<T>({
 
 ### 3.2 Flatten & visible-list algorithm
 
-- **`flatten(nodes)`** — depth-first walk producing the full `TreeRow<T>[]`:
+- **`flatten(nodes)`** — depth-first walk producing the full `FlatNode<T>[]`:
   `{ item, id, parentId, depth, hasChildren }`. Memoized on `[nodes]`. The virtualizer only
   ever sees a flat list, so virtualization and trees compose cleanly.
 - **Visible list derivation:**
@@ -94,40 +94,30 @@ useTree<T>({
   - Memoized; O(n) per relevant change.
 - **Per-row `expanded`:** `query` present → `true` for kept ancestors; else `expandedIds.has(id)`.
 
-### 3.3 Aggregate "select all under node" rows (opt-in)
+### 3.3 Aggregate "select all under node" affordance (opt-in)
 
 When `aggregateSelectAll` is set (and the composed combo is multi-select), each **expandable**
-node emits a synthetic first-child row:
+parent row gains a tri-state "select all" **affordance rendered within its own `treeitem`** — not
+a separate synthetic list row. This keeps the core parameterized over the real item type `T`
+(`items: T[]`); no fake/marker items ever flow through `getItemId`, `select`, or `selectedItems`.
+The tree layer exposes two helpers the affordance calls (both take the composed combo at call
+time, since the combo is created after `useTree` — §3.5):
 
-- `kind: "aggregate"`, id is `parentId + "::__all__"`, `depth: parentDepth + 1`, `hasChildren: false`.
-- It is a **real entry** in `items` / `rows`, so virtualization, active-index navigation,
-  `aria-setsize`/`aria-posinset`, and `aria-activedescendant` require no special-casing.
-- The synthetic sentinel is **never** added to `selectedItems`. The only special behavior is
-  at the primitive layer (§3.6): its `onClick` calls `tree.toggleAllUnder(parentId)` instead
-  of `combo.select`, and its checked state is derived.
-- `toggleAllUnder(nodeId)`: if the aggregate state is `checked` → remove all descendant leaves
-  from selection; otherwise → add all missing descendant leaves. It computes the next selection
-  array and applies it via the core's bulk `combo.setSelectedItems(next)` (single update, single
-  `onChange`) — never by looping `select()`, which would toggle already-selected leaves off.
-  Descendant-leaf ids come from the memoized flatten, so it is O(subtree).
-- `getAggregateState(nodeId)`: `"checked"` (all descendant leaves selected) / `"indeterminate"`
-  (some) / `"unchecked"` (none), derived from `combo.selectedItems`.
+- `toggleAllUnder(combo, nodeId)`: if the aggregate state is `checked` → remove all descendant
+  leaf **items** from selection; otherwise → add all missing descendant leaf items. It computes
+  the next selection array and applies it via the core's bulk `combo.setSelectedItems(next)`
+  (single update, single `onChange`) — never by looping `select()`, which would toggle
+  already-selected leaves off. Descendant-leaf items come from the memoized flatten, so it is
+  O(subtree).
+- `getAggregateState(combo, nodeId)`: `"checked"` (all descendant leaves selected) /
+  `"indeterminate"` (some) / `"unchecked"` (none), derived from `combo.selectedItems` by id.
 
 ### 3.4 `TreeApi<T>` — output
 
-```ts
-interface TreeApi<T> {
-  items: T[];                 // flat visible list → feeds useAutocomplete
-  rows: TreeRow<T>[];         // index-aligned metadata (rows[i] ↔ items[i])
-  expandedIds: Set<string>;
-  expand: (id: string) => void;
-  collapse: (id: string) => void;
-  toggle: (id: string) => void;
-  composeKeyDown: (coreOnKeyDown: (e: KeyboardEvent) => void) => (e: KeyboardEvent) => void;
-  toggleAllUnder: (nodeId: string) => void;
-  getAggregateState: (nodeId: string) => "checked" | "indeterminate" | "unchecked";
-}
+`TreeCombo<T>` is the slice of the composed combo the tree helpers read:
+`Pick<AutocompleteVirtualApi<T>, "activeIndex" | "setActiveIndex" | "selectedItems" | "setSelectedItems" | "getInputProps">`.
 
+```ts
 interface TreeRow<T> {
   item: T;
   id: string;
@@ -135,7 +125,18 @@ interface TreeRow<T> {
   depth: number;
   hasChildren: boolean;
   expanded: boolean;
-  kind: "node" | "aggregate";
+}
+
+interface TreeApi<T> {
+  items: T[];                 // flat visible list (T[]) → feeds useAutocompleteVirtual
+  rows: TreeRow<T>[];         // index-aligned metadata (rows[i] ↔ items[i])
+  expandedIds: Set<string>;
+  expand: (id: string) => void;
+  collapse: (id: string) => void;
+  toggle: (id: string) => void;
+  composeKeyDown: (combo: TreeCombo<T>) => (e: KeyboardEvent) => void;
+  toggleAllUnder: (combo: TreeCombo<T>, nodeId: string) => void;
+  getAggregateState: (combo: TreeCombo<T>, nodeId: string) => "checked" | "indeterminate" | "unchecked";
 }
 ```
 
@@ -159,10 +160,12 @@ const combo = useAutocompleteVirtual({
   `combo.getInputProps().value`.
 - **Hook ordering:** `useTree` needs the query and `useAutocomplete*` needs `tree.items`; the
   composer's `query` mirror breaks the pull cleanly (both read the same `query`).
-- **`←`/`→` composition:** `tree.composeKeyDown(combo.getInputProps().onKeyDown)` returns a
-  merged handler (tree handles `←`/`→` with `preventDefault`; core handles `↑`/`↓`/Enter/Escape).
-  Passed as the input's `onKeyDown` prop, it overrides the base getter's handler with the
-  fully-composed one — so the base `<Combobulate.Input>` stays 100% tree-unaware.
+- **`←`/`→` composition:** `tree.composeKeyDown(combo)` returns a merged handler (tree handles
+  `←`/`→` on the active row with `preventDefault`; then delegates to
+  `combo.getInputProps().onKeyDown` for `↑`/`↓`/Enter/Escape when not already handled). It takes
+  the whole `combo` because it reads `combo.activeIndex`/`setActiveIndex` at event time. Passed
+  as the input's `onKeyDown` prop, it overrides the base getter's handler with the fully-composed
+  one — so the base `<Combobulate.Input>` stays 100% tree-unaware.
 
 ### 3.6 Tree primitives — `<Combobulate.Tree>` / `<Combobulate.TreeItem>`
 
@@ -171,13 +174,12 @@ The base primitives (`Root/Input/List/Item/Empty`) are untouched and tree-unawar
 
 - **`<Combobulate.Tree>`** — renders the virtualized scroll container like `<List>`, but stamps
   `role="tree"` (overriding `getListProps`'s `role="listbox"`) and `aria-multiselectable` when
-  multi-select. Its render-prop yields `(item, index, meta)` so consumers get depth/expansion
-  without recomputing.
+  multi-select. Its render-prop yields `(item, index)`; `<TreeItem>` looks up `tree.rows[index]`
+  for depth/expansion so consumers don't recompute.
 - **`<Combobulate.TreeItem item index>`** — merges at render:
   ```tsx
   const base = combo.getItemProps(item, index); // id, aria-selected, setsize, posinset, data-active, onClick, onPointerMove
   const meta = tree.rows[index];
-  // node rows:
   <div
     {...base}
     role="treeitem"                              // overrides role="option"
@@ -185,14 +187,17 @@ The base primitives (`Root/Input/List/Item/Empty`) are untouched and tree-unawar
     aria-expanded={meta.hasChildren ? meta.expanded : undefined}
     data-depth={meta.depth}
     data-expanded={meta.expanded ? "" : undefined}
-  />
+  >
+    {/* consumer children: optional chevron + label + optional aggregate control */}
+  </div>
   ```
   - A consumer-rendered **chevron** affordance calls `tree.toggle(meta.id)` and **stops
     propagation**, so toggling expansion never selects the row.
-  - **Aggregate rows** (`meta.kind === "aggregate"`): `onClick` is swapped to
-    `tree.toggleAllUnder(meta.parentId)`; state is derived via `tree.getAggregateState`, surfaced
-    as `aria-checked={"true" | "false" | "mixed"}` with `aria-selected` omitted (a tri-state
-    control, not a selectable option); `data-indeterminate` exposed for styling.
+  - **Aggregate affordance** (only on `meta.hasChildren` rows when `aggregateSelectAll`): a nested
+    control whose `onClick` (with `stopPropagation`) calls `tree.toggleAllUnder(combo, meta.id)`;
+    its state comes from `tree.getAggregateState(combo, meta.id)`, surfaced as
+    `aria-checked={"true" | "false" | "mixed"}` on a `role="checkbox"` element; `data-indeterminate`
+    exposed for styling. Selecting the row itself is still normal single-node selection.
 
 ### 3.7 `<NestedAutocomplete>` preset
 
@@ -210,7 +215,7 @@ interface NestedAutocompleteProps<T> {
   placeholder?: string;
   estimateSize?: (index: number) => number;
   multiple?: boolean;
-  selectAllUnder?: boolean;      // opt-in aggregate rows
+  selectAllUnder?: boolean;      // opt-in "select all under node" affordance (multi-select)
   emptyMessage?: ReactNode;
 }
 ```
@@ -280,21 +285,21 @@ variable content (multi-line labels), with `estimateSize` as a rough guess, rely
   into-first-child / collapse / to-parent); aggregate `toggleAllUnder` + `getAggregateState`
   tri-state; controlled `expandedIds` + `onExpandedChange`.
 - **Tree primitives unit:** `role="tree"` / `role="treeitem"`; `aria-level` / `aria-expanded`;
-  `data-depth` / `data-expanded`; chevron toggles expansion without selecting; aggregate row
-  `aria-checked="mixed"`.
+  `data-depth` / `data-expanded`; chevron toggles expansion without selecting; aggregate
+  affordance `role="checkbox"` with `aria-checked="mixed"`.
 - **Core additive unit:** bulk `setSelectedItems` (replaces selection, fires `onChange` once);
   `announcement` string transitions (count / no-results / loading) + `getLiveRegionProps`.
 - **Core regression guard:** the existing 29 core tests stay green and still never reference
   expansion.
 - **E2E (Playwright):** nested-tree keyboard + ARIA (`role="tree"`/`treeitem`, `aria-level`,
-  `aria-activedescendant` resolving to a mounted node after `←`/`→`, aggregate `aria-checked="mixed"`);
-  dynamic heights; fuzzy; async.
+  `aria-activedescendant` resolving to a mounted node after `←`/`→`, aggregate affordance
+  `aria-checked="mixed"`); dynamic heights; fuzzy; async.
 
 ---
 
 ## 8. Task-group ordering
 
-1. **A — tree core → primitives → aggregate rows → `<NestedAutocomplete>` → nested e2e.**
+1. **A — tree core → primitives → aggregate affordance → `<NestedAutocomplete>` → nested e2e.**
 2. **C — live region** (core additive) lands alongside A's preset so both presets can include it.
 3. **B and C demos** — dynamic-height, fuzzy, and async playground scenarios + their e2e.
 4. **Polish** — full pipeline (`lint` / `typecheck` / `test` / `build` / `e2e`) green; README
