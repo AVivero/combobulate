@@ -52,3 +52,11 @@ test("select (multiple) accumulates and toggles", () => {
   act(() => result.current.select("Madrid"));
   expect(result.current.selectedItems).toEqual(["Paris"]);
 });
+
+test("debounce delays filtering", async () => {
+  const { result } = renderHook(() => useAutocomplete({ items: ITEMS, debounce: 50 }));
+  act(() => result.current.setInputValue("ma"));
+  expect(result.current.filteredItems.length).toBe(ITEMS.length);
+  await act(() => new Promise((r) => setTimeout(r, 70)));
+  expect(result.current.filteredItems).toEqual(["Madrid", "Málaga"]);
+});

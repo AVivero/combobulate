@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { defaultFilterItems, defaultGetSearchText, resolveItemId } from "./item-utils";
 import type { AutocompleteApi, UseAutocompleteOptions } from "./types";
+import { useDebouncedValue } from "./use-debounced-value";
 
 /**
  * Headless state machine for a linear (non-nested) autocomplete/combobox.
@@ -19,6 +20,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     onOpenChange,
     defaultOpen = false,
     defaultValue = null,
+    debounce = 0,
   } = options;
 
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -28,10 +30,12 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     defaultValue == null ? [] : Array.isArray(defaultValue) ? defaultValue : [defaultValue],
   );
 
+  const debouncedQuery = useDebouncedValue(inputValue, debounce);
+
   const filteredItems = useMemo(() => {
-    if (filterItems) return filterItems(items, inputValue);
-    return defaultFilterItems(items, inputValue, getSearchText);
-  }, [items, inputValue, filterItems, getSearchText]);
+    if (filterItems) return filterItems(items, debouncedQuery);
+    return defaultFilterItems(items, debouncedQuery, getSearchText);
+  }, [items, debouncedQuery, filterItems, getSearchText]);
 
   const filteredRef = useRef(filteredItems);
   filteredRef.current = filteredItems;
