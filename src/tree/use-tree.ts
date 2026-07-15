@@ -43,6 +43,9 @@ export function useTree<T>(options: UseTreeOptions<T>): TreeApi<T> {
 
   const items = useMemo(() => rows.map((r) => r.item), [rows]);
 
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+
   const expandedRef = useRef(expandedIds);
   expandedRef.current = expandedIds;
 
@@ -81,11 +84,34 @@ export function useTree<T>(options: UseTreeOptions<T>): TreeApi<T> {
     [applyExpanded],
   );
 
-  // Keyboard + aggregate helpers are implemented in later tasks; stub for now.
   const composeKeyDown = useCallback<TreeApi<T>["composeKeyDown"]>(
-    (combo) => (event) => combo.getInputProps().onKeyDown(event),
-    [],
+    (combo) => (event) => {
+      const currentRows = rowsRef.current;
+      const row = currentRows[combo.activeIndex];
+      if (row) {
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          if (row.hasChildren && !row.expanded) expand(row.id);
+          else if (row.hasChildren && row.expanded) combo.setActiveIndex(combo.activeIndex + 1);
+          return;
+        }
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          if (row.hasChildren && row.expanded) {
+            collapse(row.id);
+          } else if (row.parentId !== null) {
+            const parentIndex = currentRows.findIndex((r) => r.id === row.parentId);
+            if (parentIndex >= 0) combo.setActiveIndex(parentIndex);
+          }
+          return;
+        }
+      }
+      combo.getInputProps().onKeyDown(event);
+    },
+    [expand, collapse],
   );
+
+  // Aggregate helpers are implemented in a later task; stub for now.
   const toggleAllUnder = useCallback<TreeApi<T>["toggleAllUnder"]>(() => {}, []);
   const getAggregateState = useCallback<TreeApi<T>["getAggregateState"]>(
     () => "unchecked" as const,

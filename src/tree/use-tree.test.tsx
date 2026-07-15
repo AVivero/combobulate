@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
+import type { KeyboardEvent } from "react";
 import { useTree } from "./use-tree";
 
 interface Node {
@@ -78,4 +79,70 @@ test("controlled expandedIds ignores internal toggle", () => {
 test("query filters to matches plus ancestors and auto-expands", () => {
   const { result } = renderHook(() => useTree({ ...base, query: "orange" }));
   expect(result.current.rows.map((r) => r.id)).toEqual(["fruit", "citrus", "orange"]);
+});
+
+function fakeCombo(rows: { id: string }[], activeIndex: number) {
+  const calls: { setActiveIndex: number[]; coreKeys: string[] } = {
+    setActiveIndex: [],
+    coreKeys: [],
+  };
+  const combo = {
+    activeIndex,
+    setActiveIndex: (i: number) => calls.setActiveIndex.push(i),
+    selectedItems: [] as unknown[],
+    setSelectedItems: () => {},
+    getInputProps: () => ({
+      onKeyDown: (e: KeyboardEvent) => calls.coreKeys.push(e.key),
+    }),
+  };
+  return { combo, calls };
+}
+
+function key(k: string): KeyboardEvent {
+  let prevented = false;
+  return {
+    key: k,
+    preventDefault: () => {
+      prevented = true;
+    },
+    get defaultPrevented() {
+      return prevented;
+    },
+  } as unknown as KeyboardEvent;
+}
+
+test("ArrowRight on a collapsed parent expands it", () => {
+  const { result } = renderHook(() => useTree({ ...base, defaultExpandedIds: [] }));
+  const { combo } = fakeCombo(result.current.rows, 0); // active = "fruit" (collapsed parent)
+  act(() => result.current.composeKeyDown(combo as never)(key("ArrowRight")));
+  expect(result.current.rows.map((r) => r.id)).toContain("apple");
+});
+
+test("ArrowRight on an expanded parent moves into the first child", () => {
+  const { result } = renderHook(() => useTree({ ...base, defaultExpandedIds: ["fruit"] }));
+  const { combo, calls } = fakeCombo(result.current.rows, 0); // active = "fruit" (expanded)
+  act(() => result.current.composeKeyDown(combo as never)(key("ArrowRight")));
+  expect(calls.setActiveIndex).toEqual([1]);
+});
+
+test("ArrowLeft on an expanded parent collapses it", () => {
+  const { result } = renderHook(() => useTree({ ...base, defaultExpandedIds: ["fruit"] }));
+  const { combo } = fakeCombo(result.current.rows, 0);
+  act(() => result.current.composeKeyDown(combo as never)(key("ArrowLeft")));
+  expect(result.current.rows.map((r) => r.id)).toEqual(["fruit", "veg"]);
+});
+
+test("ArrowLeft on a child moves active to its parent index", () => {
+  const { result } = renderHook(() => useTree({ ...base, defaultExpandedIds: ["fruit"] }));
+  // rows: fruit(0), apple(1), citrus(2), veg(3); active = apple(1), parent fruit(0)
+  const { combo, calls } = fakeCombo(result.current.rows, 1);
+  act(() => result.current.composeKeyDown(combo as never)(key("ArrowLeft")));
+  expect(calls.setActiveIndex).toEqual([0]);
+});
+
+test("non-arrow keys delegate to the core handler", () => {
+  const { result } = renderHook(() => useTree(base));
+  const { combo, calls } = fakeCombo(result.current.rows, 0);
+  act(() => result.current.composeKeyDown(combo as never)(key("Enter")));
+  expect(calls.coreKeys).toEqual(["Enter"]);
 });
