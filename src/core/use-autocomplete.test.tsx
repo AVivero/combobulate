@@ -140,3 +140,12 @@ test("announcement reflects open/result/loading state", () => {
   rerender({ loading: true });
   expect(result.current.announcement).toBe("Loading…");
 });
+
+test("announcement uses singular phrasing for exactly one result", () => {
+  const { result } = renderHook(() => useAutocomplete({ items: ITEMS }));
+  act(() => {
+    result.current.open();
+    result.current.setInputValue("berlin");
+  });
+  expect(result.current.announcement).toBe("1 result");
+});

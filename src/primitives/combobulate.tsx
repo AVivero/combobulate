@@ -97,7 +97,6 @@ function Empty({ children }: { children: ReactNode }) {
 function LiveRegion() {
   const api = useCombobulateContext();
   return (
-    // biome-ignore lint/a11y/useSemanticElements: an explicit status role is intentional so headless consumers can reuse getLiveRegionProps on any element
     <div
       {...api.getLiveRegionProps()}
       style={{
