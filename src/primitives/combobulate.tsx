@@ -90,5 +90,32 @@ function Empty({ children }: { children: ReactNode }) {
   return <output>{children}</output>;
 }
 
+/**
+ * Visually-hidden polite live region announcing result counts and loading
+ * state. The wrapper is off-screen but readable by assistive tech.
+ */
+function LiveRegion() {
+  const api = useCombobulateContext();
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: an explicit status role is intentional so headless consumers can reuse getLiveRegionProps on any element
+    <div
+      {...api.getLiveRegionProps()}
+      style={{
+        position: "absolute",
+        width: 1,
+        height: 1,
+        padding: 0,
+        margin: -1,
+        overflow: "hidden",
+        clip: "rect(0 0 0 0)",
+        whiteSpace: "nowrap",
+        border: 0,
+      }}
+    >
+      {api.announcement}
+    </div>
+  );
+}
+
 /** Headless Combobulate primitives. */
-export const Combobulate = { Root, Input, List, Item, Empty };
+export const Combobulate = { Root, Input, List, Item, Empty, LiveRegion };

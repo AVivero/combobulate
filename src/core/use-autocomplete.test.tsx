@@ -126,3 +126,17 @@ test("debounce delays filtering", async () => {
   await act(() => new Promise((r) => setTimeout(r, 70)));
   expect(result.current.filteredItems).toEqual(["Madrid", "Málaga"]);
 });
+
+test("announcement reflects open/result/loading state", () => {
+  const { result, rerender } = renderHook(
+    ({ loading }: { loading: boolean }) => useAutocomplete({ items: ITEMS, loading }),
+    { initialProps: { loading: false } },
+  );
+  expect(result.current.announcement).toBe(""); // closed
+  act(() => result.current.open());
+  expect(result.current.announcement).toBe("4 results");
+  act(() => result.current.setInputValue("zzz"));
+  expect(result.current.announcement).toBe("No results");
+  rerender({ loading: true });
+  expect(result.current.announcement).toBe("Loading…");
+});

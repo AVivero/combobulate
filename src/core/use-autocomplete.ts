@@ -26,6 +26,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     defaultOpen = false,
     defaultValue = null,
     debounce = 0,
+    loading = false,
   } = options;
 
   const listId = useId();
@@ -112,6 +113,14 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     [getItemId],
   );
 
+  const announcement = loading
+    ? "Loading…"
+    : !isOpen
+      ? ""
+      : filteredItems.length === 0
+        ? "No results"
+        : `${filteredItems.length} result${filteredItems.length === 1 ? "" : "s"}`;
+
   const getters = createPropGetters({
     isOpen,
     listId,
@@ -143,6 +152,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     setSelectedItems,
     getItemId: getItemIdCb,
     listId,
+    announcement,
     ...getters,
   };
 }

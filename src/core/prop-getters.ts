@@ -81,6 +81,11 @@ export function createPropGetters<T>(state: PropGetterState<T>) {
       onFocus: () => state.setOpen(true),
     }),
     getListProps: () => ({ id: state.listId, role: "listbox" as const }),
+    getLiveRegionProps: () => ({
+      role: "status" as const,
+      "aria-live": "polite" as const,
+      "aria-atomic": true as const,
+    }),
     getItemProps: (item: T, index: number) => {
       const isActive = index === state.activeIndex;
       const isSelected = state.isSelected(item);
