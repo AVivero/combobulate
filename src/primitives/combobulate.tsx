@@ -4,12 +4,16 @@ import { CombobulateProvider, useCombobulateContext } from "./context";
 
 /** Props for {@link Combobulate}'s `Root` component. */
 export interface CombobulateRootProps<T> {
-  /** The value returned by `useAutocomplete`/`useAutocompleteVirtual`. */
+  /** The value returned by `useAutocompleteVirtual` (not the plain `useAutocomplete`). */
   api: AutocompleteVirtualApi<T>;
   children: ReactNode;
 }
 
-/** Root provider. Pass the value returned by `useAutocompleteVirtual`. */
+/**
+ * Root provider. Pass the value returned by `useAutocompleteVirtual` — the
+ * primitives (notably `Combobulate.List`) render through the virtualizer, so
+ * a plain `useAutocomplete` api will not satisfy this component's props.
+ */
 function Root<T>({ api, children }: CombobulateRootProps<T>) {
   return <CombobulateProvider value={api}>{children}</CombobulateProvider>;
 }
