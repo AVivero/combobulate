@@ -17,12 +17,15 @@
   },
   "files": ["dist"],
   "sideEffects": ["**/*.css"],
+  "workspaces": ["examples/*"],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "dev": "bun --cwd examples/playground run dev",
+    "e2e": "playwright test"
   },
   "peerDependencies": {
     "react": ">=18",
