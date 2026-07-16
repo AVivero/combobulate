@@ -106,5 +106,10 @@ export function computeVisibleRows<T>(
   }
   const keepSet = new Set(matchSet);
   for (const id of collectAncestorIds(flat, matchSet)) keepSet.add(id);
+  // Visibility here is driven purely by `keepSet` (matches + ancestors), NOT by
+  // `expandedIds`: every kept parent is reported `expanded` so matched leaves
+  // keep their context. Consequence: toggling a chevron while a query is active
+  // has no visible effect — but the toggle still mutates `expandedIds`, so the
+  // chosen expansion takes effect the moment the query is cleared.
   return flat.filter((f) => keepSet.has(f.id)).map((f) => ({ ...f, expanded: f.hasChildren }));
 }

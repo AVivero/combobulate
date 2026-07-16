@@ -79,6 +79,9 @@ export function TreeItem<T>({ item, index, children }: TreeItemProps<T>) {
     <div
       {...base}
       role="treeitem"
+      // aria-level is 1-based, so depth (0-based) + 1. The `? : 1` fallback is
+      // defensive: `meta` is only undefined if `index` outruns `tree.rows`,
+      // which shouldn't happen for a row the virtualizer actually mounted.
       aria-level={meta ? meta.depth + 1 : 1}
       aria-expanded={meta?.hasChildren ? meta.expanded : undefined}
       data-depth={meta?.depth}
@@ -106,9 +109,16 @@ export function AggregateCheckbox<T>({ nodeId }: AggregateCheckboxProps) {
   const ariaChecked = state === "checked" ? "true" : state === "indeterminate" ? "mixed" : "false";
   const toggle = () => tree.toggleAllUnder(api, nodeId);
   return (
+    // tabIndex={-1}, not 0: in the combobox pattern focus stays on the input and
+    // rows are reached via aria-activedescendant. A tab stop inside the
+    // virtualized listbox would be unstable — the virtualizer can unmount the
+    // focused row on scroll. Activation is pointer-driven for now; a key handled
+    // at the input to toggle the active row's aggregate is a planned follow-up.
+    // onKeyDown is retained so the control still responds if it holds focus
+    // (e.g. immediately after a click).
     <span
       role="checkbox"
-      tabIndex={0}
+      tabIndex={-1}
       aria-checked={ariaChecked}
       data-indeterminate={state === "indeterminate" ? "" : undefined}
       onClick={(event) => {

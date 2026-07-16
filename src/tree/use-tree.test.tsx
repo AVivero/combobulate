@@ -147,6 +147,36 @@ test("non-arrow keys delegate to the core handler", () => {
   expect(calls.coreKeys).toEqual(["Enter"]);
 });
 
+test("ArrowRight on a leaf row is inert (no expand, no move)", () => {
+  const { result } = renderHook(() => useTree({ ...base, defaultExpandedIds: ["fruit"] }));
+  // rows: fruit(0), apple(1), citrus(2), veg(3); active = apple(1), a leaf.
+  const { combo, calls } = fakeCombo(result.current.rows, 1);
+  act(() => result.current.composeKeyDown(combo as never)(key("ArrowRight")));
+  expect(calls.setActiveIndex).toEqual([]);
+  expect(calls.coreKeys).toEqual([]);
+  // rows unchanged — nothing expanded or collapsed.
+  expect(result.current.rows.map((r) => r.id)).toEqual(["fruit", "apple", "citrus", "veg"]);
+});
+
+test("ArrowLeft on a collapsed root (no parent) is inert", () => {
+  // active = "fruit": collapsed (so nothing to collapse) and parentId null (so
+  // nowhere to move). Exercises the `parentId !== null` guard's false branch.
+  const { result } = renderHook(() => useTree({ ...base, defaultExpandedIds: [] }));
+  const { combo, calls } = fakeCombo(result.current.rows, 0);
+  act(() => result.current.composeKeyDown(combo as never)(key("ArrowLeft")));
+  expect(calls.setActiveIndex).toEqual([]);
+  expect(calls.coreKeys).toEqual([]);
+});
+
+test("out-of-range activeIndex delegates to the core handler", () => {
+  const { result } = renderHook(() => useTree(base));
+  const { combo, calls } = fakeCombo(result.current.rows, 99); // no such row
+  act(() => result.current.composeKeyDown(combo as never)(key("ArrowRight")));
+  // No row → tree nav is skipped and the key falls through to the core handler.
+  expect(calls.coreKeys).toEqual(["ArrowRight"]);
+  expect(calls.setActiveIndex).toEqual([]);
+});
+
 function selectionCombo(initial: Node[]) {
   const state = { selectedItems: initial };
   const combo = {

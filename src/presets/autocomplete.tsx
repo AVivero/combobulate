@@ -10,7 +10,7 @@ export type AutocompleteProps<T> = {
   renderItem?: (item: T) => ReactNode;
   /** Accessor for an item's searchable/display text. */
   getSearchText?: (item: T) => string;
-  /** Accessor for an item's stable id. Defaults to identity via index. */
+  /** Accessor for an item's stable id. Falls back to the item's positional index. */
   getItemId?: (item: T) => string;
   /** Custom filter. Defaults to a normalized substring match. */
   filterItems?: (items: T[], query: string) => T[];

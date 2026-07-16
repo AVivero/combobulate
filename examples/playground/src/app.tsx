@@ -1,14 +1,14 @@
 import { Autocomplete, Combobulate, NestedAutocomplete, useAutocompleteVirtual } from "combobulate";
 import Fuse from "fuse.js";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const TEN_K = Array.from({ length: 10_000 }, (_, i) => `Item ${i.toString().padStart(5, "0")}`);
 
-interface TreeNode {
+type TreeNode = {
   id: string;
   label: string;
   children?: TreeNode[];
-}
+};
 
 const NESTED: TreeNode[] = Array.from({ length: 50 }, (_, g) => ({
   id: `group-${g}`,
@@ -55,6 +55,14 @@ function AsyncCombobox() {
   const [items, setItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Clear any in-flight debounce timer on unmount so it can't fire setState
+  // after the component is gone.
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
   const api = useAutocompleteVirtual({
     items,
     loading,
