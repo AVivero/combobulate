@@ -76,61 +76,37 @@ function SkeletonRows() {
  * Async airport search: styled with Emotion, built on the `Autocomplete`
  * preset. The real matching (fuzzy, via Fuse) is synchronous and instant,
  * but that's not a very convincing "remote search" — so a `setTimeout`
- * simulates network latency around it. On every keystroke (detected via a
- * native `input` listener on the wrapper, since the preset doesn't expose an
- * `onInputChange` hook) `loading` flips true, any previous debounce timer is
- * cancelled, and a fresh one is scheduled; only once it fires does `loading`
- * flip back to false. While `loading` is true the real listbox/empty-state
- * are hidden (`visibility: hidden`, scoped via the wrapper's `css`) and
- * Emotion skeleton rows render in their place.
+ * simulates network latency around it. The preset's `onInputChange` fires on
+ * every keystroke: it flips `loading` true, cancels any pending debounce
+ * timer, and schedules a fresh one that flips `loading` back to false. While
+ * `loading` is true the real listbox/empty-state are hidden
+ * (`visibility: hidden`, scoped via the wrapper's `css`) and Emotion skeleton
+ * rows render in their place.
  */
 export function AsyncTypeahead() {
   const [loading, setLoading] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    /** Set by `handleInput`, cleared by the effect's own cleanup. */
-    let deferId: ReturnType<typeof setTimeout> | null = null;
-
-    function handleInput() {
-      /**
-       * Deferred one macrotask: this listener is attached directly via
-       * `addEventListener` (the preset exposes no `onInputChange`), so it
-       * fires *before* React's own delegated listener processes the same
-       * native "input" event (bubbling reaches this ancestor node first).
-       * Calling `setState` synchronously here would trigger a React
-       * re-render mid-dispatch using the *stale* (pre-keystroke) input
-       * value, which resets the controlled `<input>`'s DOM value back to
-       * that stale value — and by the time React's own `onChange` reads
-       * `event.target.value` moments later, the keystroke is already gone.
-       * Deferring past the current synchronous dispatch (React's onChange
-       * included) avoids the race entirely.
-       */
-      deferId = setTimeout(() => {
-        setLoading(true);
-        if (debounceRef.current !== null) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => {
-          debounceRef.current = null;
-          setLoading(false);
-        }, SIMULATED_LATENCY_MS);
-      }, 0);
-    }
-
-    container.addEventListener("input", handleInput);
-    return () => {
-      container.removeEventListener("input", handleInput);
-      if (deferId !== null) clearTimeout(deferId);
+  // Clear a pending debounce timer on unmount so it can't setState after teardown.
+  useEffect(
+    () => () => {
       if (debounceRef.current !== null) clearTimeout(debounceRef.current);
-    };
-  }, []);
+    },
+    [],
+  );
+
+  const handleInputChange = () => {
+    setLoading(true);
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      setLoading(false);
+    }, SIMULATED_LATENCY_MS);
+  };
 
   return (
     <ThemeProvider theme={emotionTheme}>
       <div
-        ref={containerRef}
         css={css`
           position: relative;
           /*
@@ -157,6 +133,7 @@ export function AsyncTypeahead() {
           items={AIRPORTS}
           filterItems={fuzzyFilterAirports}
           getItemId={(airport) => airport.iata}
+          onInputChange={handleInputChange}
           renderItem={(airport) => (
             <AirportRow
               kind="airport"
