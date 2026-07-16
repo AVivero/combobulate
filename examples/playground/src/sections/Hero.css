@@ -6,12 +6,16 @@
  * own role/data-* hooks is the documented workaround (see the design spec's
  * "Boundaries" #3) instead of expanding the library's props surface.
  * `.hero-field` scopes these rules to the flight-search hero's comboboxes.
+ *
+ * The dropdown's own position/size is now owned by `Combobulate.Popover`
+ * (floating layer, see Hero.tsx), so the manual `position: absolute` /
+ * `inset-inline` / `top` / `z-index` rules that used to place this panel
+ * in-flow are gone. The card look (background/border/shadow) stays: it's
+ * the listbox's own visual surface, independent of who positions it, and
+ * matches the same convention used by the `Autocomplete`/`NestedAutocomplete`
+ * cards (see WorldAirports.css / NestedGeography.css).
  */
 .hero-field [role="listbox"] {
-  position: absolute;
-  inset-inline: 0;
-  top: calc(100% + 0.375rem);
-  z-index: 20;
   background-color: var(--cbl-surface);
   border: 1px solid var(--cbl-border);
   border-radius: var(--cbl-radius);

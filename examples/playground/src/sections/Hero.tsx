@@ -1,4 +1,11 @@
-import { type AutocompleteVirtualApi, Combobulate, useAutocompleteVirtual } from "combobulate";
+import {
+  type AutocompleteFloating,
+  type AutocompleteVirtualApi,
+  Combobulate,
+  useAutocompleteFloating,
+  useAutocompleteVirtual,
+} from "combobulate";
+import type { KeyboardEvent } from "react";
 import { AirportRow } from "../components/AirportRow";
 import airportsData from "../data/airports.json";
 import { POPULAR } from "../data/popular";
@@ -124,16 +131,29 @@ function displayLabel(item: HeroItem): string {
   return item.kind === "metro" ? `${item.city} — All airports` : `${item.city} (${item.iata})`;
 }
 
+/**
+ * `floating.referenceProps` is a `Record<string, unknown>` (it comes straight
+ * from Floating UI's `getReferenceProps()`), so its `onKeyDown` needs a
+ * runtime guard before it can be invoked from typed code.
+ */
+function invokeKeyDown(handler: unknown, event: KeyboardEvent<HTMLInputElement>): void {
+  if (typeof handler === "function") {
+    (handler as (event: KeyboardEvent<HTMLInputElement>) => void)(event);
+  }
+}
+
 function ComboboxField({
   legend,
   ariaLabel,
   placeholder,
   api,
+  floating,
 }: {
   legend: string;
   ariaLabel: string;
   placeholder: string;
   api: AutocompleteVirtualApi<HeroItem>;
+  floating: AutocompleteFloating;
 }) {
   return (
     <div className="hero-field relative min-w-0">
@@ -143,20 +163,37 @@ function ComboboxField({
           aria-label={ariaLabel}
           placeholder={placeholder}
           className="w-full rounded-token border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-accent"
+          ref={floating.reference}
+          {...floating.referenceProps}
+          // `floating.referenceProps` carries its own `onKeyDown` (Escape-to-
+          // dismiss), and `Combobulate.Input` merges external props over the
+          // primitive's own `getInputProps()` via a plain object spread, so
+          // spreading `referenceProps` verbatim silently replaces (rather
+          // than augments) the combobox's own arrow-key/Enter handling.
+          // Composing both here keeps arrow-key navigation working alongside
+          // Escape-to-dismiss.
+          onKeyDown={(event) => {
+            api.getInputProps().onKeyDown(event);
+            invokeKeyDown(floating.referenceProps.onKeyDown, event);
+          }}
         />
-        <Combobulate.List>
-          {(item: HeroItem, index: number) => (
-            <Combobulate.Item item={item} index={index}>
-              <AirportRow
-                kind={item.kind}
-                city={item.city}
-                country={item.country}
-                name={item.name}
-                iata={item.iata}
-              />
-            </Combobulate.Item>
-          )}
-        </Combobulate.List>
+        <Combobulate.Popover floating={floating}>
+          <Combobulate.List
+            style={{ position: "static", maxHeight: "none", flex: "1 1 auto", minHeight: 0 }}
+          >
+            {(item: HeroItem, index: number) => (
+              <Combobulate.Item item={item} index={index}>
+                <AirportRow
+                  kind={item.kind}
+                  city={item.city}
+                  country={item.country}
+                  name={item.name}
+                  iata={item.iata}
+                />
+              </Combobulate.Item>
+            )}
+          </Combobulate.List>
+        </Combobulate.Popover>
         <Combobulate.LiveRegion />
       </Combobulate.Root>
     </div>
@@ -187,6 +224,8 @@ export function Hero() {
       destination.close();
     },
   });
+  const originFloating = useAutocompleteFloating(origin, { closeOnSelect: true });
+  const destinationFloating = useAutocompleteFloating(destination, { closeOnSelect: true });
 
   function handleSwap() {
     const originItems = origin.selectedItems;
@@ -206,6 +245,7 @@ export function Hero() {
         ariaLabel="Origin airport"
         placeholder="Where from?"
         api={origin}
+        floating={originFloating}
       />
       <button
         type="button"
@@ -220,6 +260,7 @@ export function Hero() {
         ariaLabel="Destination airport"
         placeholder="Where to?"
         api={destination}
+        floating={destinationFloating}
       />
     </div>
   );
