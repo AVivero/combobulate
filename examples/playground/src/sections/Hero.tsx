@@ -1,4 +1,10 @@
-import { type AutocompleteVirtualApi, Combobulate, useAutocompleteVirtual } from "combobulate";
+import {
+  type AutocompleteFloating,
+  type AutocompleteVirtualApi,
+  Combobulate,
+  useAutocompleteFloating,
+  useAutocompleteVirtual,
+} from "combobulate";
 import { AirportRow } from "../components/AirportRow";
 import airportsData from "../data/airports.json";
 import { POPULAR } from "../data/popular";
@@ -129,11 +135,13 @@ function ComboboxField({
   ariaLabel,
   placeholder,
   api,
+  floating,
 }: {
   legend: string;
   ariaLabel: string;
   placeholder: string;
   api: AutocompleteVirtualApi<HeroItem>;
+  floating: AutocompleteFloating;
 }) {
   return (
     <div className="hero-field relative min-w-0">
@@ -143,20 +151,26 @@ function ComboboxField({
           aria-label={ariaLabel}
           placeholder={placeholder}
           className="w-full rounded-token border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-accent"
+          ref={floating.reference}
+          {...floating.referenceProps}
         />
-        <Combobulate.List>
-          {(item: HeroItem, index: number) => (
-            <Combobulate.Item item={item} index={index}>
-              <AirportRow
-                kind={item.kind}
-                city={item.city}
-                country={item.country}
-                name={item.name}
-                iata={item.iata}
-              />
-            </Combobulate.Item>
-          )}
-        </Combobulate.List>
+        <Combobulate.Popover floating={floating}>
+          <Combobulate.List
+            style={{ position: "static", maxHeight: "none", flex: "1 1 auto", minHeight: 0 }}
+          >
+            {(item: HeroItem, index: number) => (
+              <Combobulate.Item item={item} index={index}>
+                <AirportRow
+                  kind={item.kind}
+                  city={item.city}
+                  country={item.country}
+                  name={item.name}
+                  iata={item.iata}
+                />
+              </Combobulate.Item>
+            )}
+          </Combobulate.List>
+        </Combobulate.Popover>
         <Combobulate.LiveRegion />
       </Combobulate.Root>
     </div>
@@ -187,6 +201,8 @@ export function Hero() {
       destination.close();
     },
   });
+  const originFloating = useAutocompleteFloating(origin, { closeOnSelect: true });
+  const destinationFloating = useAutocompleteFloating(destination, { closeOnSelect: true });
 
   function handleSwap() {
     const originItems = origin.selectedItems;
@@ -206,6 +222,7 @@ export function Hero() {
         ariaLabel="Origin airport"
         placeholder="Where from?"
         api={origin}
+        floating={originFloating}
       />
       <button
         type="button"
@@ -220,6 +237,7 @@ export function Hero() {
         ariaLabel="Destination airport"
         placeholder="Where to?"
         api={destination}
+        floating={destinationFloating}
       />
     </div>
   );

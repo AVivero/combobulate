@@ -81,7 +81,17 @@ function SkeletonRows() {
  * timer, and schedules a fresh one that flips `loading` back to false. While
  * `loading` is true the real listbox/empty-state are hidden
  * (`visibility: hidden`, scoped via the wrapper's `css`) and Emotion skeleton
- * rows render in their place.
+ * rows render in their place, directly below the input, in normal flow.
+ *
+ * The `Autocomplete` preset now floats its dropdown (`Combobulate.Popover`):
+ * the listbox is an absolutely-positioned overlay anchored to the input, not
+ * an in-flow sibling, so it no longer displaces the skeleton rows and there's
+ * no blank-gap problem to solve. `visibility: hidden` is still required
+ * (otherwise the previous query's floating results would render on top of
+ * the skeleton while the new query is in flight); it's kept scoped to
+ * `[role="listbox"]`/`output` rather than swapped for hiding the whole
+ * `Autocomplete` subtree so TanStack Virtual's scroll-container
+ * `ResizeObserver` never sees a zero-size box (see below).
  */
 export function AsyncTypeahead() {
   const [loading, setLoading] = useState(false);
@@ -116,11 +126,18 @@ export function AsyncTypeahead() {
            * virtualizer then never recovers from once un-hidden. Hidden
            * elements are still excluded from the accessibility tree (and
            * from Playwright's visibility checks), which is all we need.
-           * "position: absolute" while hidden keeps it out of layout flow so
-           * the skeleton rows take its place instead of leaving a blank gap;
-           * "!important" is needed because Combobulate.List sets position:
-           * relative as an inline style, which otherwise wins over this
-           * class rule.
+           * The listbox now renders inside Combobulate.Popover's floating
+           * overlay rather than in normal flow, so there's no in-flow gap
+           * to fill behind it anymore; "position: absolute" while hidden is
+           * kept anyway (rather than dropped as dead weight) because it
+           * also takes the hidden listbox out of the popover's own flex
+           * layout while loading, which keeps Floating UI's flip/size
+           * recalculation working off the same (empty) box both before the
+           * query resolves and after — flipping the sizing behavior only
+           * while loading toggles risked the popover settling on a
+           * different placement once the real results reappear. "!important"
+           * is needed because Combobulate.List sets position: static as an
+           * inline style, which otherwise wins over this class rule.
            */
           [role="listbox"],
           output {
