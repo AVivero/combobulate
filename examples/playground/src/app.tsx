@@ -1,6 +1,7 @@
 import { Section } from "./components/Section";
 import { AsyncTypeahead } from "./sections/AsyncTypeahead";
 import { Hero } from "./sections/Hero";
+import { MultiSelectChips } from "./sections/MultiSelectChips";
 import { NestedGeography } from "./sections/NestedGeography";
 import { ThemeToggle } from "./theme/ThemeToggle";
 
@@ -75,7 +76,7 @@ export function App() {
           badge="Emotion"
           description="Selected airports render as removable chips, driven by the headless hook."
         >
-          <ComingSoon note="Coming up: multi-select airport chips." />
+          <MultiSelectChips />
         </Section>
 
         <Section
