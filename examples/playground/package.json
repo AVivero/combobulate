@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview --port 4173" },
-  "dependencies": { "react": "^19.0.0", "react-dom": "^19.0.0" },
+  "dependencies": { "fuse.js": "^7.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" },
   "devDependencies": {
     "@tanstack/react-virtual": "^3.10.9",
     "@vitejs/plugin-react": "^4.3.4",
