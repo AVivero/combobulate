@@ -1,11 +1,15 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
-    "jsxImportSource": "@emotion/react",
+    "jsxImportSource": "react",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
@@ -13,7 +17,22 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["bun", "react", "react-dom"]
+    "types": [
+      "bun",
+      "react",
+      "react-dom"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "combobulate": [
+        "../../src/index.ts"
+      ]
+    }
   },
-  "include": ["src", "scripts", "vite.config.ts", "tailwind.config.ts"]
+  "include": [
+    "src",
+    "scripts",
+    "vite.config.ts",
+    "tailwind.config.ts"
+  ]
 }
