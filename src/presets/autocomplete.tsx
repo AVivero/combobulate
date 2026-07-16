@@ -22,6 +22,8 @@ export interface AutocompleteProps<T> {
   estimateSize?: (index: number) => number;
   /** Rendered in place of the list when there are no matches. */
   emptyMessage?: ReactNode;
+  /** External loading flag; drives the live-region announcement. */
+  loading?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ export function Autocomplete<T>({
   placeholder,
   estimateSize,
   emptyMessage = "No results",
+  loading,
 }: AutocompleteProps<T>) {
   const api = useAutocompleteVirtual({
     items,
@@ -48,6 +51,7 @@ export function Autocomplete<T>({
     filterItems,
     onChange,
     estimateSize,
+    loading,
   });
   return (
     <div className="cbl-root">
@@ -63,6 +67,7 @@ export function Autocomplete<T>({
         <Combobulate.Empty>
           <div className="cbl-empty">{emptyMessage}</div>
         </Combobulate.Empty>
+        <Combobulate.LiveRegion />
       </Combobulate.Root>
     </div>
   );

@@ -10,13 +10,15 @@ export interface TreeProps<T> {
   /** Render-prop invoked once per visible (virtualized) item. */
   children: (item: T, index: number) => ReactNode;
   style?: React.CSSProperties;
+  /** Whether the tree allows multi-selection; controls `aria-multiselectable`. */
+  multiple?: boolean;
 }
 
 /**
  * Virtualized `role="tree"` scroll container. Reads the combo api from context
  * (for virtualization + list wiring) and provides the tree api to descendants.
  */
-export function Tree<T>({ tree, children, style }: TreeProps<T>) {
+export function Tree<T>({ tree, children, style, multiple }: TreeProps<T>) {
   const api = useCombobulateContext<T>();
   if (!api.isOpen) return null;
   const rows = api.virtualizer.getVirtualItems();
@@ -27,7 +29,7 @@ export function Tree<T>({ tree, children, style }: TreeProps<T>) {
       <div
         {...listProps}
         role="tree"
-        aria-multiselectable
+        aria-multiselectable={multiple || undefined}
         ref={ref as React.Ref<HTMLDivElement>}
         style={{ overflow: "auto", position: "relative", maxHeight: 300, ...style }}
       >

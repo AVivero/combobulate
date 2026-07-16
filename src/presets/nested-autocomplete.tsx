@@ -79,7 +79,7 @@ export function NestedAutocomplete<T>({
           placeholder={placeholder}
           onKeyDown={tree.composeKeyDown(combo)}
         />
-        <Tree tree={tree}>
+        <Tree tree={tree} multiple={multiple}>
           {(item: T, index: number) => {
             const meta = tree.rows[index];
             return (
