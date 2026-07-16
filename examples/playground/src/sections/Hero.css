@@ -1,0 +1,27 @@
+/*
+ * Combobulate.List / Combobulate.Item render their own wrapper elements and
+ * don't accept a `className` prop (see src/primitives/combobulate.tsx), so a
+ * few visuals that must live on those exact elements can't be expressed as
+ * Tailwind classes in Hero.tsx. Scoped plain CSS keyed off the primitives'
+ * own role/data-* hooks is the documented workaround (see the design spec's
+ * "Boundaries" #3) instead of expanding the library's props surface.
+ * `.hero-field` scopes these rules to the flight-search hero's comboboxes.
+ */
+.hero-field [role="listbox"] {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 0.375rem);
+  z-index: 20;
+  background-color: var(--cbl-surface);
+  border: 1px solid var(--cbl-border);
+  border-radius: var(--cbl-radius);
+  box-shadow: var(--cbl-shadow);
+}
+
+.hero-field [data-active] {
+  background-color: color-mix(in srgb, var(--cbl-accent) 12%, var(--cbl-surface));
+}
+
+.hero-field [data-selected] {
+  background-color: color-mix(in srgb, var(--cbl-accent) 20%, var(--cbl-surface));
+}

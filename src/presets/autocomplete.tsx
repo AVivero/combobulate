@@ -16,6 +16,8 @@ export type AutocompleteProps<T> = {
   filterItems?: (items: T[], query: string) => T[];
   /** Fired when selection changes. */
   onChange?: (value: T | T[] | null) => void;
+  /** Fired synchronously on every input change. Use for async/remote search. */
+  onInputChange?: (value: string) => void;
   /** Placeholder text for the input. */
   placeholder?: string;
   /** Estimated row height in px, passed through to TanStack Virtual. */
@@ -39,6 +41,7 @@ export function Autocomplete<T>({
   getItemId,
   filterItems,
   onChange,
+  onInputChange,
   placeholder,
   estimateSize,
   emptyMessage = "No results",
@@ -50,6 +53,7 @@ export function Autocomplete<T>({
     getItemId,
     filterItems,
     onChange,
+    onInputChange,
     estimateSize,
     loading,
   });

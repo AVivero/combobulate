@@ -46,9 +46,12 @@ function App() {
 ```
 
 `<Autocomplete>` accepts `items`, `renderItem`, `getSearchText`,
-`filterItems`, `onChange`, `placeholder`, `estimateSize`, and
-`emptyMessage` — see [`AutocompleteProps`](./src/presets/autocomplete.tsx)
-for the full list.
+`getItemId`, `filterItems`, `onChange`, `onInputChange`, `loading`,
+`placeholder`, `estimateSize`, and `emptyMessage` — see
+[`AutocompleteProps`](./src/presets/autocomplete.tsx) for the full list.
+`onInputChange` + `loading` are the hooks for async/remote search: fire a
+request as the user types, flip `loading` on, and the live region
+announces it.
 
 ### 2. Headless primitives — `useAutocompleteVirtual` + `Combobulate.*`
 
@@ -112,6 +115,33 @@ one update.
 
 See the [tree layer design spec](./docs/superpowers/specs/2026-07-15-combobulate-tree-layer-design.md)
 for the full architecture.
+
+## Examples — travel showcase
+
+`examples/playground` is a Google-Flights-style showcase built on real
+airport data (~3,300 scheduled-service airports from OurAirports):
+
+```sh
+cd examples/playground
+bun install
+bun run dev
+```
+
+It demonstrates the patterns that matter in production autocompletes:
+
+- **Flight search hero** — Origin→Destination on the headless primitives,
+  rich rows (city · airport · IATA badge), metro-area rollups, and a swap.
+- **Nested geography** — Country → City → Airport with `NestedAutocomplete`
+  and select-all-under ("all NYC airports").
+- **Async typeahead** — remote-search simulation with `loading`, skeletons,
+  and live-region announcements.
+- **Multi-select chips** — removable chips driven by the hook's selection.
+- **World airports** — ~3,300 real airports in one virtualized list.
+
+Each section is styled with a **different** system — Tailwind or Emotion,
+with a shared light/dark token layer — to show Combobulate imposes no
+styling opinion. The airport data is committed; rebuild it with
+`bun scripts/build-airports.ts`.
 
 ## Why
 

@@ -46,3 +46,11 @@ test("typing filters and clicking selects", async () => {
   await user.click(options[0] as HTMLElement);
   expect(selected).toBe("Madrid");
 });
+
+test("onInputChange fires on every keystroke (for async/remote search)", async () => {
+  const user = userEvent.setup();
+  const seen: string[] = [];
+  render(<Autocomplete items={ITEMS} onInputChange={(v) => seen.push(v)} placeholder="City" />);
+  await user.type(screen.getByRole("combobox"), "ma");
+  expect(seen).toEqual(["m", "ma"]);
+});
