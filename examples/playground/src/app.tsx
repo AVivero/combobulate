@@ -1,5 +1,6 @@
 import { Section } from "./components/Section";
 import { Hero } from "./sections/Hero";
+import { NestedGeography } from "./sections/NestedGeography";
 import { ThemeToggle } from "./theme/ThemeToggle";
 
 const REPO_URL = "https://github.com/alexvivero/combobulate";
@@ -55,7 +56,7 @@ export function App() {
           badge="Tailwind"
           description="Country → City → Airport, browsed and multi-selected with NestedAutocomplete."
         >
-          <ComingSoon note="Coming up: a virtualized, keyboard-navigable geography tree." />
+          <NestedGeography />
         </Section>
 
         <Section
