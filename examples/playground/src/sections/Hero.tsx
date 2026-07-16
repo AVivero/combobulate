@@ -29,27 +29,41 @@ function normalize(text: string): string {
 }
 
 /**
- * Deterministic 3-letter badge for a metro rollup. Real IATA "metro codes"
- * (e.g. LON for London) require an external city->code mapping this dataset
- * doesn't carry, so this derives a stand-in from the city name instead - it
- * happens to match reality for cases like London, but isn't guaranteed to.
+ * Real IATA metropolitan-area codes, keyed by `city|countryCode`, for the
+ * multi-airport metros present in this dataset. Only cities listed here get an
+ * "All airports" rollup — so every rollup shown carries an authentic code, and
+ * cities that merely happen to share two airports (or carry no city name) are
+ * left as plain airport rows.
  */
-function metroCode(city: string): string {
-  const letters = normalize(city).replace(/[^a-z]/g, "");
-  return (letters.slice(0, 3) || "***").toUpperCase();
-}
+const METRO_CODES: Record<string, string> = {
+  "New York|US": "NYC",
+  "London|GB": "LON",
+  "Chicago|US": "CHI",
+  "Moscow|RU": "MOW",
+  "Toronto|CA": "YTO",
+  "Montréal|CA": "YMQ",
+  "São Paulo|BR": "SAO",
+  "Rome|IT": "ROM",
+  "Stockholm|SE": "STO",
+  "Osaka|JP": "OSA",
+  "Seoul|KR": "SEL",
+  "Beijing|CN": "BJS",
+  "Bangkok|TH": "BKK",
+  "Jakarta|ID": "JKT",
+};
 
 /**
- * Pure: groups airports by city+country and prepends a `metro` rollup item
- * directly above the first airport of any city with 2+ airports. Cities with
- * no name (some remote-airport rows carry an empty `city`) are never grouped.
+ * Pure: groups airports by `city|countryCode` and prepends a `metro` rollup
+ * item (with the real IATA metro code) directly above the first airport of any
+ * city in {@link METRO_CODES}. Cities not in that table — including unnamed
+ * remote-airport rows — are never grouped.
  */
 export function withMetros(airports: Airport[]): HeroItem[] {
   const groups = new Map<string, Airport[]>();
   for (const airport of airports) {
     const city = airport.city.trim();
     if (!city) continue;
-    const key = `${city}|${airport.country}`;
+    const key = `${city}|${airport.countryCode}`;
     const group = groups.get(key);
     if (group) group.push(airport);
     else groups.set(key, [airport]);
@@ -58,10 +72,11 @@ export function withMetros(airports: Airport[]): HeroItem[] {
   const metroByKey = new Map<string, HeroItem>();
   for (const [key, group] of groups) {
     const first = group[0];
-    if (group.length < 2 || !first) continue;
+    const code = METRO_CODES[key];
+    if (!code || group.length < 2 || !first) continue;
     metroByKey.set(key, {
       kind: "metro",
-      iata: metroCode(first.city),
+      iata: code,
       city: first.city,
       country: first.country,
       name: "All airports",
@@ -72,7 +87,7 @@ export function withMetros(airports: Airport[]): HeroItem[] {
   const seen = new Set<string>();
   for (const airport of airports) {
     const city = airport.city.trim();
-    const key = city ? `${city}|${airport.country}` : "";
+    const key = city ? `${city}|${airport.countryCode}` : "";
     const metro = key ? metroByKey.get(key) : undefined;
     if (metro && !seen.has(key)) {
       seen.add(key);
