@@ -116,6 +116,45 @@ one update.
 See the [tree layer design spec](./docs/superpowers/specs/2026-07-15-combobulate-tree-layer-design.md)
 for the full architecture.
 
+## Floating dropdown
+
+The presets (`<Autocomplete>`, `<NestedAutocomplete>`) render the dropdown as a
+**collision-aware floating overlay** by default: it anchors to the input, flips
+above when there's no room below, matches the input width, caps its height to
+the viewport, and dismisses on outside-click or Escape (single-select also
+closes on pick). No layout shift, no setup.
+
+For the headless primitives, opt in with `useAutocompleteFloating` +
+`<Combobulate.Popover>`:
+
+```tsx
+import { Combobulate, useAutocompleteVirtual, useAutocompleteFloating } from "combobulate";
+
+function CityPicker() {
+  const combo = useAutocompleteVirtual({ items: CITIES });
+  const floating = useAutocompleteFloating(combo, { closeOnSelect: true });
+
+  return (
+    <Combobulate.Root api={combo}>
+      <Combobulate.Input ref={floating.reference} {...floating.referenceProps} />
+      <Combobulate.Popover floating={floating}>
+        <Combobulate.List>
+          {(item, index) => (
+            <Combobulate.Item item={item} index={index}>
+              {String(item)}
+            </Combobulate.Item>
+          )}
+        </Combobulate.List>
+      </Combobulate.Popover>
+    </Combobulate.Root>
+  );
+}
+```
+
+Positioning is powered by [`@floating-ui/react`](https://floating-ui.com), which
+is bundled **only** when you import the floating layer — the core and base
+primitives stay positioning-agnostic, so a non-floating list costs you nothing.
+
 ## Examples — travel showcase
 
 `examples/playground` is a Google-Flights-style showcase built on real
