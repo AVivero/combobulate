@@ -17,6 +17,14 @@ const NESTED: TreeNode[] = Array.from({ length: 50 }, (_, g) => ({
   })),
 }));
 
+const VARIABLE = Array.from({ length: 2000 }, (_, i) => ({
+  id: `v-${i}`,
+  label:
+    i % 3 === 0
+      ? `Item ${i} — a longer, multi-line label that wraps across two or three lines to force a taller measured row height under virtualization`
+      : `Item ${i}`,
+}));
+
 /** Showcase app: a virtualized autocomplete over 10,000 items. */
 export function App() {
   return (
@@ -36,6 +44,17 @@ export function App() {
           placeholder="Search groups & items…"
           multiple
           selectAllUnder
+        />
+      </section>
+      <section data-testid="dynamic">
+        <h2>Dynamic (measured) row heights</h2>
+        <Autocomplete
+          items={VARIABLE}
+          getSearchText={(n) => n.label}
+          getItemId={(n) => n.id}
+          renderItem={(n) => n.label}
+          estimateSize={() => 40}
+          placeholder="Search variable-height rows…"
         />
       </section>
     </main>

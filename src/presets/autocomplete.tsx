@@ -10,6 +10,8 @@ export interface AutocompleteProps<T> {
   renderItem?: (item: T) => ReactNode;
   /** Accessor for an item's searchable/display text. */
   getSearchText?: (item: T) => string;
+  /** Accessor for an item's stable id. Defaults to identity via index. */
+  getItemId?: (item: T) => string;
   /** Custom filter. Defaults to a normalized substring match. */
   filterItems?: (items: T[], query: string) => T[];
   /** Fired when selection changes. */
@@ -32,13 +34,21 @@ export function Autocomplete<T>({
   items,
   renderItem = (item) => String(item),
   getSearchText,
+  getItemId,
   filterItems,
   onChange,
   placeholder,
   estimateSize,
   emptyMessage = "No results",
 }: AutocompleteProps<T>) {
-  const api = useAutocompleteVirtual({ items, getSearchText, filterItems, onChange, estimateSize });
+  const api = useAutocompleteVirtual({
+    items,
+    getSearchText,
+    getItemId,
+    filterItems,
+    onChange,
+    estimateSize,
+  });
   return (
     <div className="cbl-root">
       <Combobulate.Root api={api}>
