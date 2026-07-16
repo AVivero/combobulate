@@ -3,20 +3,12 @@ import { AsyncTypeahead } from "./sections/AsyncTypeahead";
 import { Hero } from "./sections/Hero";
 import { MultiSelectChips } from "./sections/MultiSelectChips";
 import { NestedGeography } from "./sections/NestedGeography";
+import { WorldAirports } from "./sections/WorldAirports";
 import { ThemeToggle } from "./theme/ThemeToggle";
 
 const REPO_URL = "https://github.com/alexvivero/combobulate";
 
-/** Placeholder shown for a section until its task fills in the real component. */
-function ComingSoon({ note }: { note: string }) {
-  return (
-    <p className="rounded-token border border-dashed border-border p-4 text-sm text-muted">
-      {note}
-    </p>
-  );
-}
-
-/** Travel-showcase page shell: header, hero, four pattern cards, footer. */
+/** Travel-showcase page shell: header, hero, five pattern cards, footer. */
 export function App() {
   return (
     <div className="min-h-screen bg-bg text-text">
@@ -83,9 +75,9 @@ export function App() {
           testid="world"
           title="World airports"
           badge="Tailwind"
-          description="The full ~9k-airport dataset in a single virtualized, variable-height list."
+          description="The full ~3,274-airport dataset in a single virtualized, variable-height list."
         >
-          <ComingSoon note="Coming up: the full virtualized world-airports list." />
+          <WorldAirports />
         </Section>
       </main>
 
