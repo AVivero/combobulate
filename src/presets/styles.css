@@ -34,10 +34,6 @@
   color: #64748b;
 }
 
-.cbl-tree {
-  position: relative;
-}
-
 .cbl-treeitem {
   display: flex;
   align-items: center;
