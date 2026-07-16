@@ -34,6 +34,8 @@ export interface UseAutocompleteOptions<T> {
   multiple?: boolean;
   /** Debounce (ms) applied to filtering. Default 0 (off). */
   debounce?: number;
+  /** External loading flag for async data. Drives the live-region announcement. */
+  loading?: boolean;
 }
 
 /** Public API returned by {@link useAutocomplete}. */
@@ -50,6 +52,8 @@ export interface AutocompleteApi<T> {
   moveActive: (delta: number) => void;
   selectedItems: T[];
   select: (item: T) => void;
+  /** Replace the entire selection in one update. Fires `onChange` once. */
+  setSelectedItems: (items: T[]) => void;
   /**
    * Resolve an item's **logical** id (the caller's `getItemId` accessor, or
    * the item's positional index as a fallback). This is not the rendered DOM
@@ -59,6 +63,14 @@ export interface AutocompleteApi<T> {
   getItemId: (item: T, index: number) => string;
   /** Stable id of the listbox element, used to wire `aria-controls`/`aria-activedescendant`. */
   listId: string;
+  /** Screen-reader announcement string (result count / no-results / loading). */
+  announcement: string;
+  /** Props for a visually-hidden polite live region. */
+  getLiveRegionProps: () => {
+    role: "status";
+    "aria-live": "polite";
+    "aria-atomic": true;
+  };
   /** Props for the text input, including ARIA wiring and keyboard navigation. */
   getInputProps: () => {
     role: "combobox";

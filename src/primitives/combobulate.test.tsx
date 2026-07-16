@@ -40,6 +40,7 @@ function Demo() {
         )}
       </Combobulate.List>
       <Combobulate.Empty>No results</Combobulate.Empty>
+      <Combobulate.LiveRegion />
     </Combobulate.Root>
   );
 }
@@ -56,8 +57,17 @@ test("Empty renders its children when the open list has no matches", () => {
   render(<Demo />);
   const input = screen.getByRole("combobox");
   fireEvent.change(input, { target: { value: "zzz-no-match-zzz" } });
-  expect(screen.getByText("No results")).toBeTruthy();
+  // `selector: "output"` disambiguates from the live region, which now also
+  // renders "No results" as its announcement for the same filtered state.
+  expect(screen.getByText("No results", { selector: "output" })).toBeTruthy();
   expect(screen.queryAllByRole("option").length).toBe(0);
+});
+
+test("LiveRegion renders the announcement in a polite status region", () => {
+  render(<Demo />);
+  const region = screen.getByRole("status");
+  expect(region.getAttribute("aria-live")).toBe("polite");
+  expect(region.textContent).toBe("3 results"); // Demo has 3 items, defaultOpen
 });
 
 test("primitives throw a guard error when used outside Combobulate.Root", () => {

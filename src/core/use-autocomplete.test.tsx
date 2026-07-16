@@ -81,10 +81,71 @@ test("select uses id-based identity for object items with getItemId, so a fresh 
   expect(result.current.getItemProps(freshA, 0)["aria-selected"]).toBe(false);
 });
 
+test("setSelectedItems replaces selection wholesale and fires onChange once", () => {
+  let changed: unknown;
+  let calls = 0;
+  const { result } = renderHook(() =>
+    useAutocomplete({
+      items: ITEMS,
+      multiple: true,
+      onChange: (v) => {
+        changed = v;
+        calls += 1;
+      },
+    }),
+  );
+  act(() => result.current.setSelectedItems(["Paris", "Madrid"]));
+  expect(result.current.selectedItems).toEqual(["Paris", "Madrid"]);
+  expect(changed).toEqual(["Paris", "Madrid"]);
+  expect(calls).toBe(1);
+});
+
+test("setSelectedItems clamps to single-select invariant", () => {
+  let changed: unknown;
+  let calls = 0;
+  const { result } = renderHook(() =>
+    useAutocomplete({
+      items: ITEMS,
+      multiple: false,
+      onChange: (v) => {
+        changed = v;
+        calls += 1;
+      },
+    }),
+  );
+  act(() => result.current.setSelectedItems(["Paris", "Madrid"]));
+  expect(result.current.selectedItems).toEqual(["Paris"]);
+  expect(changed).toBe("Paris");
+  expect(calls).toBe(1);
+});
+
 test("debounce delays filtering", async () => {
   const { result } = renderHook(() => useAutocomplete({ items: ITEMS, debounce: 50 }));
   act(() => result.current.setInputValue("ma"));
   expect(result.current.filteredItems.length).toBe(ITEMS.length);
   await act(() => new Promise((r) => setTimeout(r, 70)));
   expect(result.current.filteredItems).toEqual(["Madrid", "Málaga"]);
+});
+
+test("announcement reflects open/result/loading state", () => {
+  const { result, rerender } = renderHook(
+    ({ loading }: { loading: boolean }) => useAutocomplete({ items: ITEMS, loading }),
+    { initialProps: { loading: false } },
+  );
+  expect(result.current.announcement).toBe(""); // closed
+  act(() => result.current.open());
+  expect(result.current.announcement).toBe("4 results");
+  act(() => result.current.setInputValue("zzz"));
+  expect(result.current.announcement).toBe("No results");
+  rerender({ loading: true });
+  expect(result.current.announcement).toBe("Loading…");
+});
+
+test("announcement uses singular phrasing for exactly one result", () => {
+  const { result } = renderHook(() => useAutocomplete({ items: ITEMS }));
+  act(() => {
+    result.current.open();
+    result.current.setInputValue("berlin");
+  });
+  expect(result.current.announcement).toBe("1 result");
 });

@@ -33,3 +33,45 @@
   padding: 8px 12px;
   color: #64748b;
 }
+
+.cbl-treeitem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+[data-active] .cbl-treeitem {
+  background: #e2e8f0;
+}
+
+[data-selected] .cbl-treeitem-label {
+  font-weight: 600;
+}
+
+.cbl-chevron {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  width: 16px;
+  line-height: 1;
+}
+
+/*
+ * The chevron glyph is rendered via `content` (not JSX text) so that a
+ * treeitem's accessible `textContent` reflects only its label, not this
+ * decorative disclosure triangle.
+ */
+.cbl-chevron::before {
+  content: "▸";
+}
+
+.cbl-chevron[data-expanded]::before {
+  content: "▾";
+}
+
+[role="checkbox"][data-indeterminate] {
+  opacity: 0.6;
+}

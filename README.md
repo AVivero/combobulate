@@ -84,6 +84,35 @@ plain `useAutocomplete` hook returns the same open/filter/select state
 machine and prop getters — bring your own list rendering (or roll your
 own virtualizer integration).
 
+## Nested tree
+
+The tree layer is an opt-in composition on top of the tree-unaware core —
+your `nodes`/`items` never need to know a tree exists.
+
+```tsx
+import { NestedAutocomplete } from "combobulate";
+import "combobulate/styles.css";
+
+<NestedAutocomplete
+  nodes={nodes}
+  getChildren={(n) => n.children}
+  getItemId={(n) => n.id}
+  getSearchText={(n) => n.label}
+  multiple
+  selectAllUnder
+/>;
+```
+
+`useTree` is the headless hook underneath: it owns `expandedIds` and emits
+a flat visible list (`items` + index-aligned `rows`) that feeds
+`useAutocompleteVirtual` directly. `←`/`→` expand/collapse the active row,
+and `selectAllUnder` adds a tri-state "select all under node" control
+(multi-select only) that selects or deselects every leaf beneath a node in
+one update.
+
+See the [tree layer design spec](./docs/superpowers/specs/2026-07-15-combobulate-tree-layer-design.md)
+for the full architecture.
+
 ## Why
 
 Virtualized lists and accessible comboboxes fight each other: a combobox

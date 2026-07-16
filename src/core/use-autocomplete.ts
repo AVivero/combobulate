@@ -4,6 +4,10 @@ import { createPropGetters } from "./prop-getters";
 import type { AutocompleteApi, UseAutocompleteOptions } from "./types";
 import { useDebouncedValue } from "./use-debounced-value";
 
+function toChangeValue<T>(items: T[], multiple: boolean): T | T[] | null {
+  return multiple ? items : (items[0] ?? null);
+}
+
 /**
  * Headless state machine for a linear (non-nested) autocomplete/combobox.
  * Owns open state, input text, the active descendant index, filtering, and
@@ -22,13 +26,14 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     defaultOpen = false,
     defaultValue = null,
     debounce = 0,
+    loading = false,
   } = options;
 
   const listId = useId();
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [inputValue, setInputValueState] = useState("");
   const [activeIndex, setActiveIndexState] = useState(-1);
-  const [selectedItems, setSelectedItems] = useState<T[]>(() =>
+  const [selectedItems, setSelectedItemsState] = useState<T[]>(() =>
     defaultValue == null ? [] : Array.isArray(defaultValue) ? defaultValue : [defaultValue],
   );
 
@@ -73,7 +78,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
 
   const select = useCallback(
     (item: T) => {
-      setSelectedItems((prev) => {
+      setSelectedItemsState((prev) => {
         let next: T[];
         if (multiple) {
           next = prev.some((i) => isSameItem(i, item, getItemId))
@@ -82,11 +87,20 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
         } else {
           next = [item];
         }
-        onChange?.(multiple ? next : (next[0] ?? null));
+        onChange?.(toChangeValue(next, multiple));
         return next;
       });
     },
     [multiple, onChange, getItemId],
+  );
+
+  const setSelectedItems = useCallback(
+    (next: T[]) => {
+      const clamped = multiple ? [...next] : next.slice(0, 1);
+      setSelectedItemsState(clamped);
+      onChange?.(toChangeValue(clamped, multiple));
+    },
+    [multiple, onChange],
   );
 
   const isSelected = useCallback(
@@ -98,6 +112,14 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     (item: T, index: number) => resolveItemId(item, index, getItemId),
     [getItemId],
   );
+
+  const announcement = loading
+    ? "Loading…"
+    : !isOpen
+      ? ""
+      : filteredItems.length === 0
+        ? "No results"
+        : `${filteredItems.length} result${filteredItems.length === 1 ? "" : "s"}`;
 
   const getters = createPropGetters({
     isOpen,
@@ -127,8 +149,10 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     moveActive,
     selectedItems,
     select,
+    setSelectedItems,
     getItemId: getItemIdCb,
     listId,
+    announcement,
     ...getters,
   };
 }

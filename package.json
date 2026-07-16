@@ -3,7 +3,16 @@
   "version": "0.0.0",
   "description": "The headless toolkit for accessible, virtualized autocompletes.",
   "license": "MIT",
-  "keywords": ["autocomplete", "combobox", "headless", "virtualized", "accessible", "react"],
+  "keywords": [
+    "autocomplete",
+    "combobox",
+    "headless",
+    "virtualized",
+    "accessible",
+    "react",
+    "tree",
+    "nested"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alexvivero/combobulate.git"
