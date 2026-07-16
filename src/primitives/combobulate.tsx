@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, forwardRef } from "react";
 import type { AutocompleteVirtualApi } from "../core/use-autocomplete-virtual";
 import { CombobulateProvider, useCombobulateContext } from "./context";
 
@@ -19,10 +19,12 @@ function Root<T>({ api, children }: CombobulateRootProps<T>) {
 }
 
 /** The combobox text input. */
-function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  const api = useCombobulateContext();
-  return <input {...api.getInputProps()} {...props} />;
-}
+const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  function Input(props, ref) {
+    const api = useCombobulateContext();
+    return <input {...api.getInputProps()} {...props} ref={ref} />;
+  },
+);
 
 /** Props for {@link Combobulate}'s `List` component. */
 export type CombobulateListProps<T> = {
