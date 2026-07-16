@@ -2,14 +2,14 @@ import type { KeyboardEvent } from "react";
 import type { AutocompleteVirtualApi } from "../core/use-autocomplete-virtual";
 
 /** A visible tree row: the source item plus its structural + expansion metadata. */
-export interface TreeRow<T> {
+export type TreeRow<T> = {
   item: T;
   id: string;
   parentId: string | null;
   depth: number;
   hasChildren: boolean;
   expanded: boolean;
-}
+};
 
 /** The slice of the composed combo api the tree helpers read at call time. */
 export type TreeCombo<T> = Pick<
@@ -18,7 +18,7 @@ export type TreeCombo<T> = Pick<
 >;
 
 /** Options for {@link useTree}. */
-export interface UseTreeOptions<T> {
+export type UseTreeOptions<T> = {
   /** Root nodes of the source tree. */
   nodes: T[];
   /** Accessor for a node's children (undefined/empty ⇒ leaf). */
@@ -37,10 +37,10 @@ export interface UseTreeOptions<T> {
   onExpandedChange?: (ids: Set<string>) => void;
   /** Enable the "select all under node" affordance (multi-select only). */
   aggregateSelectAll?: boolean;
-}
+};
 
 /** Public api returned by {@link useTree}. */
-export interface TreeApi<T> {
+export type TreeApi<T> = {
   /** Flat visible list of items → feeds `useAutocompleteVirtual`. */
   items: T[];
   /** Index-aligned metadata for each visible item (`rows[i]` ↔ `items[i]`). */
@@ -62,4 +62,4 @@ export interface TreeApi<T> {
     combo: TreeCombo<T>,
     nodeId: string,
   ) => "checked" | "indeterminate" | "unchecked";
-}
+};

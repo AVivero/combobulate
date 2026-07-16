@@ -4,18 +4,18 @@ import type { AutocompleteApi, UseAutocompleteOptions } from "./types";
 import { useAutocomplete } from "./use-autocomplete";
 
 /** Extra options for the virtualized variant of {@link useAutocomplete}. */
-export interface UseAutocompleteVirtualOptions<T> extends UseAutocompleteOptions<T> {
+export type UseAutocompleteVirtualOptions<T> = UseAutocompleteOptions<T> & {
   /** Estimated row height in px. Required by TanStack Virtual. */
   estimateSize?: (index: number) => number;
   /** Rows to render above/below the viewport. Default 8. */
   overscan?: number;
-}
+};
 
 /** Return type of {@link useAutocompleteVirtual}. */
-export interface AutocompleteVirtualApi<T> extends AutocompleteApi<T> {
+export type AutocompleteVirtualApi<T> = AutocompleteApi<T> & {
   virtualizer: Virtualizer<HTMLElement, Element>;
   getScrollProps: () => { ref: React.RefObject<HTMLElement | null> };
-}
+};
 
 /**
  * Virtualized autocomplete. Wraps {@link useAutocomplete} and bridges the
@@ -37,10 +37,11 @@ export function useAutocompleteVirtual<T>(
     overscan,
   });
 
-  // Bridge: keep the active row mounted whenever the active index changes.
-  // Guarded on a valid (non-negative) active index so we never call
-  // scrollToIndex(-1), which is the initial value before anything is
-  // highlighted.
+  /** Bridge: keep the active row mounted whenever the active index changes. */
+  /** Guarded on a valid (non-negative) active index so we never call
+   * {@link Virtualizer.scrollToIndex} with a negative index, which is the
+   * initial value before anything is highlighted.
+   */
   useEffect(() => {
     if (api.isOpen && api.activeIndex >= 0 && api.filteredItems.length > 0) {
       virtualizer.scrollToIndex(api.activeIndex, { align: "auto" });

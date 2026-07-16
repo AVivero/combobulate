@@ -6,11 +6,11 @@ import {
   flattenTree,
 } from "./tree-utils";
 
-interface Node {
+type Node = {
   id: string;
   label: string;
   children?: Node[];
-}
+};
 
 const TREE: Node[] = [
   {

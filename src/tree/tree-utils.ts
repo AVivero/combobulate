@@ -1,18 +1,18 @@
 import { normalizeText } from "../core/item-utils";
 
 /** A single node flattened out of the source tree, with structural metadata. */
-export interface FlatNode<T> {
+export type FlatNode<T> = {
   item: T;
   id: string;
   parentId: string | null;
   depth: number;
   hasChildren: boolean;
-}
+};
 
 /** A flattened node that survived visibility filtering, with its expansion state. */
-export interface VisibleRow<T> extends FlatNode<T> {
+export type VisibleRow<T> = FlatNode<T> & {
   expanded: boolean;
-}
+};
 
 /**
  * Depth-first flatten of a source tree into `FlatNode`s. The virtualizer only

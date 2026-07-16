@@ -27,11 +27,11 @@ afterEach(() => {
   cleanup();
 });
 
-interface Node {
+type Node = {
   id: string;
   label: string;
   children?: Node[];
-}
+};
 const TREE: Node[] = [{ id: "fruit", label: "Fruit", children: [{ id: "apple", label: "Apple" }] }];
 
 function Demo() {

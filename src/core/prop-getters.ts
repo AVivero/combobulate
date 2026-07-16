@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from "react";
 
 /** Internal state the prop-getters read from. */
-export interface PropGetterState<T> {
+export type PropGetterState<T> = {
   isOpen: boolean;
   listId: string;
   inputValue: string;
@@ -15,7 +15,7 @@ export interface PropGetterState<T> {
   moveActive: (delta: number) => void;
   setOpen: (next: boolean) => void;
   select: (item: T) => void;
-}
+};
 
 /** Build the prop-getter functions bound to the given state. */
 export function createPropGetters<T>(state: PropGetterState<T>) {

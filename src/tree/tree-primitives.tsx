@@ -4,7 +4,7 @@ import { TreeProvider, useTreeContext } from "./tree-context";
 import type { TreeApi } from "./types";
 
 /** Props for {@link Tree}. */
-export interface TreeProps<T> {
+export type TreeProps<T> = {
   /** The value returned by `useTree`. */
   tree: TreeApi<T>;
   /** Render-prop invoked once per visible (virtualized) item. */
@@ -12,7 +12,7 @@ export interface TreeProps<T> {
   style?: React.CSSProperties;
   /** Whether the tree allows multi-selection; controls `aria-multiselectable`. */
   multiple?: boolean;
-}
+};
 
 /**
  * Virtualized `role="tree"` scroll container. Reads the combo api from context
@@ -60,11 +60,11 @@ export function Tree<T>({ tree, children, style, multiple }: TreeProps<T>) {
 }
 
 /** Props for {@link TreeItem}. */
-export interface TreeItemProps<T> {
+export type TreeItemProps<T> = {
   item: T;
   index: number;
   children: ReactNode;
-}
+};
 
 /**
  * A single tree row. Spreads the core option props, then overrides ARIA to
@@ -90,10 +90,10 @@ export function TreeItem<T>({ item, index, children }: TreeItemProps<T>) {
 }
 
 /** Props for {@link AggregateCheckbox}. */
-export interface AggregateCheckboxProps {
+export type AggregateCheckboxProps = {
   /** The parent node whose descendant leaves this control selects. */
   nodeId: string;
-}
+};
 
 /**
  * Tri-state "select all under node" control. Reads/writes selection through the

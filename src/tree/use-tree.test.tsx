@@ -3,11 +3,11 @@ import { act, renderHook } from "@testing-library/react";
 import type { KeyboardEvent } from "react";
 import { useTree } from "./use-tree";
 
-interface Node {
+type Node = {
   id: string;
   label: string;
   children?: Node[];
-}
+};
 
 const TREE: Node[] = [
   {
