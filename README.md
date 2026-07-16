@@ -130,7 +130,7 @@ out of the DOM.
 
 See the [design spec](./docs/superpowers/specs/2026-07-14-combobulate-design.md)
 for the full architecture: layering, the accessibility/virtualization
-bridge, filtering/async/debounce semantics, and the planned tree layer.
+bridge, filtering and async semantics, and the tree layer.
 
 ## License
 

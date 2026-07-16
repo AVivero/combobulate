@@ -22,14 +22,6 @@ export function defaultGetSearchText(item: unknown): string {
 }
 
 /**
- * Resolve a stable id for an item, preferring the caller's `getItemId`
- * accessor and falling back to the item's positional index.
- */
-export function resolveItemId<T>(item: T, index: number, getItemId?: (item: T) => string): string {
-  return getItemId ? getItemId(item) : String(index);
-}
-
-/**
  * Default filter: keep items whose normalized search text contains the
  * normalized query as a substring. An empty (or whitespace-only) query keeps
  * everything.

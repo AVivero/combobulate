@@ -21,10 +21,7 @@ export type UseAutocompleteOptions<T> = {
   defaultValue?: T | T[] | null;
   /** Fired when selection changes. */
   onChange?: (value: T | T[] | null) => void;
-  /**
-   * Fired synchronously on every input change. Note this is independent of
-   * `debounce`, which only delays when `filteredItems` recomputes.
-   */
+  /** Fired synchronously on every input change. */
   onInputChange?: (value: string) => void;
   /** Initial open state for the uncontrolled case. */
   defaultOpen?: boolean;
@@ -32,8 +29,6 @@ export type UseAutocompleteOptions<T> = {
   onOpenChange?: (open: boolean) => void;
   /** Allow selecting multiple items. */
   multiple?: boolean;
-  /** Debounce (ms) applied to filtering. Default 0 (off). */
-  debounce?: number;
   /** External loading flag for async data. Drives the live-region announcement. */
   loading?: boolean;
 };

@@ -16,6 +16,21 @@ project rules, not suggestions.
     genuine utility/computed type (`Pick`, `Omit`, mapped types) — those are
     already `type` by necessity.
 
+## Abstraction & duplication
+
+- **Prefer a little duplication over a premature or speculative abstraction.**
+  A helper, option, or layer must earn its place with a real, present consumer.
+  - Don't build features ahead of need (YAGNI) — no options nothing calls, no
+    hooks nothing uses.
+  - Don't extract a factory/indirection that serves a single caller just to
+    "separate concerns"; inline it.
+  - Don't abstract two similar blocks *only* to remove the duplication — two
+    near-identical small files (e.g. the context providers) are cheaper to read
+    and change than one generic factory. Wait for the third case and a real
+    shared requirement before generalizing.
+  - Extraction is justified when logic is reused across several call sites AND
+    a change should propagate to all of them (e.g. `isSameItem`, `toChangeValue`).
+
 ## Tooling
 
 - Package manager + test runner: **Bun**. `bun test`, `bun run lint`,

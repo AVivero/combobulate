@@ -1,8 +1,6 @@
-import { useCallback, useId, useMemo, useRef, useState } from "react";
-import { defaultFilterItems, defaultGetSearchText, isSameItem, resolveItemId } from "./item-utils";
-import { createPropGetters } from "./prop-getters";
+import { type KeyboardEvent, useCallback, useId, useMemo, useRef, useState } from "react";
+import { defaultFilterItems, defaultGetSearchText, isSameItem } from "./item-utils";
 import type { AutocompleteApi, UseAutocompleteOptions } from "./types";
-import { useDebouncedValue } from "./use-debounced-value";
 
 /** Convert the selected items to the value type expected by the `onChange` callback. */
 function toChangeValue<T>(items: T[], multiple: boolean): T | T[] | null {
@@ -26,7 +24,6 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     onOpenChange,
     defaultOpen = false,
     defaultValue = null,
-    debounce = 0,
     loading = false,
   } = options;
 
@@ -38,12 +35,10 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     defaultValue == null ? [] : Array.isArray(defaultValue) ? defaultValue : [defaultValue],
   );
 
-  const debouncedQuery = useDebouncedValue(inputValue, debounce);
-
   const filteredItems = useMemo(() => {
-    if (filterItems) return filterItems(items, debouncedQuery);
-    return defaultFilterItems(items, debouncedQuery, getSearchText);
-  }, [items, debouncedQuery, filterItems, getSearchText]);
+    if (filterItems) return filterItems(items, inputValue);
+    return defaultFilterItems(items, inputValue, getSearchText);
+  }, [items, inputValue, filterItems, getSearchText]);
 
   const filteredRef = useRef(filteredItems);
   filteredRef.current = filteredItems;
@@ -111,7 +106,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
   );
 
   const getItemIdCb = useCallback(
-    (item: T, index: number) => resolveItemId(item, index, getItemId),
+    (item: T, index: number) => (getItemId ? getItemId(item) : String(index)),
     [getItemId],
   );
 
@@ -124,20 +119,50 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
         ? "No results"
         : `${filteredItems.length} result${filteredItems.length === 1 ? "" : "s"}`;
 
-  const getters = createPropGetters({
-    isOpen,
-    listId,
-    inputValue,
-    activeIndex,
-    filteredItems,
-    isSelected,
-    getItemId: getItemIdCb,
-    setInputValue,
-    setActiveIndex,
-    moveActive,
-    setOpen,
-    select,
-  });
+  // Prop getters. Kept inline (rather than a separate factory) because they are
+  // this hook's only caller and close directly over the state above; the DOM id
+  // is namespaced with `listId` so multiple comboboxes on one page never
+  // produce colliding ids (which would make `aria-activedescendant` ambiguous).
+  const domId = (item: T, index: number) => `${listId}-${getItemIdCb(item, index)}`;
+
+  const activeId =
+    isOpen && filteredItems[activeIndex] !== undefined
+      ? domId(filteredItems[activeIndex] as T, activeIndex)
+      : undefined;
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        if (!isOpen) {
+          setOpen(true);
+          if (activeIndex < 0) setActiveIndex(0);
+        } else {
+          moveActive(1);
+        }
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        if (!isOpen) {
+          setOpen(true);
+          if (activeIndex < 0) setActiveIndex(0);
+        } else {
+          moveActive(-1);
+        }
+        break;
+      case "Enter": {
+        const item = filteredItems[activeIndex];
+        if (isOpen && item !== undefined) {
+          event.preventDefault();
+          select(item);
+        }
+        break;
+      }
+      case "Escape":
+        setOpen(false);
+        break;
+    }
+  };
 
   return {
     isOpen,
@@ -156,6 +181,39 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     getItemId: getItemIdCb,
     listId,
     announcement,
-    ...getters,
+    getInputProps: () => ({
+      role: "combobox" as const,
+      "aria-controls": listId,
+      "aria-expanded": isOpen,
+      "aria-activedescendant": activeId,
+      value: inputValue,
+      onChange: (e: { target: { value: string } }) => {
+        setInputValue(e.target.value);
+        if (!isOpen) setOpen(true);
+      },
+      onKeyDown,
+      onFocus: () => setOpen(true),
+    }),
+    getListProps: () => ({ id: listId, role: "listbox" as const }),
+    getLiveRegionProps: () => ({
+      role: "status" as const,
+      "aria-live": "polite" as const,
+      "aria-atomic": true as const,
+    }),
+    getItemProps: (item: T, index: number) => {
+      const isActive = index === activeIndex;
+      const selected = isSelected(item);
+      return {
+        id: domId(item, index),
+        role: "option" as const,
+        "aria-selected": selected,
+        "aria-setsize": filteredItems.length,
+        "aria-posinset": index + 1,
+        "data-active": (isActive ? "" : undefined) as "" | undefined,
+        "data-selected": (selected ? "" : undefined) as "" | undefined,
+        onClick: () => select(item),
+        onPointerMove: () => setActiveIndex(index),
+      };
+    },
   };
 }
