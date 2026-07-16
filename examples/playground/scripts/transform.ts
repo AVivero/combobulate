@@ -9,14 +9,14 @@ export function toAirport(
   const iata = row.iata_code?.trim();
   if (!iata) return null;
   if (row.scheduled_service !== "yes") return null;
-  if (!KEEP_TYPES.has(row.type)) return null;
+  if (!KEEP_TYPES.has(row.type ?? "")) return null;
   return {
     iata,
     icao: row.icao_code?.trim() ?? "",
     name: row.name?.trim() ?? "",
     city: row.municipality?.trim() ?? "",
-    country: countryName(row.iso_country),
-    countryCode: row.iso_country,
+    country: countryName(row.iso_country ?? ""),
+    countryCode: row.iso_country ?? "",
     lat: Number(row.latitude_deg) || 0,
     lon: Number(row.longitude_deg) || 0,
   };
@@ -42,7 +42,12 @@ export function buildGeography(airports: Airport[]): GeoNode[] {
         kind: "city",
         children: [...list]
           .sort((x, y) => x.iata.localeCompare(y.iata))
-          .map((a) => ({ id: a.iata, label: `${a.name} (${a.iata})`, kind: "airport" as const, airport: a })),
+          .map((a) => ({
+            id: a.iata,
+            label: `${a.name} (${a.iata})`,
+            kind: "airport" as const,
+            airport: a,
+          })),
       });
     }
     cityNodes.sort((x, y) => x.label.localeCompare(y.label));

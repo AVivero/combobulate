@@ -2,7 +2,12 @@
   "name": "playground",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview --port 4173" },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": { "fuse.js": "^7.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" },
   "devDependencies": {
     "@emotion/babel-plugin": "^11.13.5",
