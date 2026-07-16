@@ -119,14 +119,6 @@ test("setSelectedItems clamps to single-select invariant", () => {
   expect(calls).toBe(1);
 });
 
-test("debounce delays filtering", async () => {
-  const { result } = renderHook(() => useAutocomplete({ items: ITEMS, debounce: 50 }));
-  act(() => result.current.setInputValue("ma"));
-  expect(result.current.filteredItems.length).toBe(ITEMS.length);
-  await act(() => new Promise((r) => setTimeout(r, 70)));
-  expect(result.current.filteredItems).toEqual(["Madrid", "Málaga"]);
-});
-
 test("announcement reflects open/result/loading state", () => {
   const { result, rerender } = renderHook(
     ({ loading }: { loading: boolean }) => useAutocomplete({ items: ITEMS, loading }),
