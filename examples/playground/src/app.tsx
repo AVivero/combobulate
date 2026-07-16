@@ -1,4 +1,5 @@
 import { Section } from "./components/Section";
+import { Hero } from "./sections/Hero";
 import { ThemeToggle } from "./theme/ThemeToggle";
 
 const REPO_URL = "https://github.com/alexvivero/combobulate";
@@ -45,7 +46,7 @@ export function App() {
           badge="Tailwind"
           description="Origin/destination comboboxes built directly on the Combobulate primitives, with metro rollups and a swap control."
         >
-          <ComingSoon note="Coming up: a two-field flight-search hero over real airport data." />
+          <Hero />
         </Section>
 
         <Section
