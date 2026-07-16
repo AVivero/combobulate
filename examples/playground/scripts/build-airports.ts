@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { parse } from "csv-parse/sync";
-import { buildGeography, toAirport } from "./transform";
 import type { Airport } from "../src/data/types";
+import { buildGeography, toAirport } from "./transform";
 
 const BASE = "https://davidmegginson.github.io/ourairports-data";
 
