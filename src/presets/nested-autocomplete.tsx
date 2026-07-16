@@ -3,8 +3,9 @@ import { useAutocompleteVirtual } from "../core/use-autocomplete-virtual";
 import { Popover } from "../floating/floating-primitives";
 import { useAutocompleteFloating } from "../floating/use-floating";
 import { Combobulate } from "../primitives/combobulate";
+import { mergeProps } from "../primitives/merge-props";
 import { AggregateCheckbox, Tree, TreeItem } from "../tree/tree-primitives";
-import type { TreeRow } from "../tree/types";
+import type { TreeCombo, TreeRow } from "../tree/types";
 import { useTree } from "../tree/use-tree";
 
 /** Props for the batteries-included {@link NestedAutocomplete} preset. */
@@ -74,15 +75,36 @@ export function NestedAutocomplete<T>({
   const floating = useAutocompleteFloating(combo, { closeOnSelect: !multiple });
   const label = (item: T, meta: TreeRow<T>) =>
     renderItem ? renderItem(item, meta) : getSearchText ? getSearchText(item) : String(item);
+  // `tree.composeKeyDown` falls back to the combo's own core keydown handler
+  // (arrow up/down, enter, escape) for any key it doesn't own — a fallback
+  // meant for consumers who wire it directly onto a raw input, bypassing
+  // `Combobulate.Input`. `Combobulate.Input` already composes that same core
+  // handler in automatically, so re-running it here would double-fire (e.g.
+  // moving the active index by two on a single ArrowDown). This facade gives
+  // `composeKeyDown` a no-op core fallback so it only contributes its own
+  // ←/→ expand/collapse/move logic; the real core handling still runs
+  // exactly once, via `Combobulate.Input`.
+  const treeCombo: TreeCombo<T> = {
+    ...combo,
+    getInputProps: () => ({ ...combo.getInputProps(), onKeyDown: () => {} }),
+  };
+  // `floating.referenceProps` carries its own `onKeyDown` (Escape-to-dismiss).
+  // Composing it with the tree's ←/→ handler here — rather than spreading
+  // both onto `Combobulate.Input` separately — keeps both working: a plain
+  // object spread would let whichever prop comes last silently replace the
+  // other instead of augmenting it.
+  const inputProps = mergeProps(
+    { onKeyDown: tree.composeKeyDown(treeCombo) },
+    floating.referenceProps,
+  );
   return (
     <div className="cbl-root">
       <Combobulate.Root api={combo}>
         <Combobulate.Input
           className="cbl-input"
           placeholder={placeholder}
-          onKeyDown={tree.composeKeyDown(combo)}
           ref={floating.reference}
-          {...floating.referenceProps}
+          {...inputProps}
         />
         <Popover floating={floating}>
           <Tree

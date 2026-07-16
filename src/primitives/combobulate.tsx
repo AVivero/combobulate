@@ -1,6 +1,7 @@
 import { type ReactNode, forwardRef } from "react";
 import type { AutocompleteVirtualApi } from "../core/use-autocomplete-virtual";
 import { CombobulateProvider, useCombobulateContext } from "./context";
+import { mergeProps } from "./merge-props";
 
 /** Props for {@link Combobulate}'s `Root` component. */
 export type CombobulateRootProps<T> = {
@@ -18,11 +19,23 @@ function Root<T>({ api, children }: CombobulateRootProps<T>) {
   return <CombobulateProvider value={api}>{children}</CombobulateProvider>;
 }
 
-/** The combobox text input. */
+/**
+ * The combobox text input.
+ *
+ * `getInputProps()`'s `onKeyDown`/`onChange`/`onFocus` and any same-named
+ * handler in `props` are composed (the combo's handler runs first, then the
+ * consumer's) rather than one clobbering the other — this is what lets a
+ * floating layer's own `onKeyDown` (e.g. Escape-to-dismiss) sit alongside
+ * arrow-key/Enter navigation when consumers spread
+ * `{...floating.referenceProps}` onto this component. Non-function props
+ * (e.g. `className`, `placeholder`) keep plain override semantics: the
+ * consumer wins.
+ */
 const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function Input(props, ref) {
     const api = useCombobulateContext();
-    return <input {...api.getInputProps()} {...props} ref={ref} />;
+    const merged = mergeProps(api.getInputProps(), props);
+    return <input {...merged} ref={ref} />;
   },
 );
 

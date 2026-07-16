@@ -5,7 +5,6 @@ import {
   useAutocompleteFloating,
   useAutocompleteVirtual,
 } from "combobulate";
-import type { KeyboardEvent } from "react";
 import { AirportRow } from "../components/AirportRow";
 import airportsData from "../data/airports.json";
 import { POPULAR } from "../data/popular";
@@ -131,17 +130,6 @@ function displayLabel(item: HeroItem): string {
   return item.kind === "metro" ? `${item.city} — All airports` : `${item.city} (${item.iata})`;
 }
 
-/**
- * `floating.referenceProps` is a `Record<string, unknown>` (it comes straight
- * from Floating UI's `getReferenceProps()`), so its `onKeyDown` needs a
- * runtime guard before it can be invoked from typed code.
- */
-function invokeKeyDown(handler: unknown, event: KeyboardEvent<HTMLInputElement>): void {
-  if (typeof handler === "function") {
-    (handler as (event: KeyboardEvent<HTMLInputElement>) => void)(event);
-  }
-}
-
 function ComboboxField({
   legend,
   ariaLabel,
@@ -165,17 +153,6 @@ function ComboboxField({
           className="w-full rounded-token border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-accent"
           ref={floating.reference}
           {...floating.referenceProps}
-          // `floating.referenceProps` carries its own `onKeyDown` (Escape-to-
-          // dismiss), and `Combobulate.Input` merges external props over the
-          // primitive's own `getInputProps()` via a plain object spread, so
-          // spreading `referenceProps` verbatim silently replaces (rather
-          // than augments) the combobox's own arrow-key/Enter handling.
-          // Composing both here keeps arrow-key navigation working alongside
-          // Escape-to-dismiss.
-          onKeyDown={(event) => {
-            api.getInputProps().onKeyDown(event);
-            invokeKeyDown(floating.referenceProps.onKeyDown, event);
-          }}
         />
         <Combobulate.Popover floating={floating}>
           <Combobulate.List
