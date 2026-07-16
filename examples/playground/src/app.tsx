@@ -1,4 +1,5 @@
 import { Section } from "./components/Section";
+import { AsyncTypeahead } from "./sections/AsyncTypeahead";
 import { Hero } from "./sections/Hero";
 import { NestedGeography } from "./sections/NestedGeography";
 import { ThemeToggle } from "./theme/ThemeToggle";
@@ -65,7 +66,7 @@ export function App() {
           badge="Emotion"
           description="A simulated remote search with loading skeletons and typo-tolerant fuzzy matching."
         >
-          <ComingSoon note="Coming up: an async airport search with loading states." />
+          <AsyncTypeahead />
         </Section>
 
         <Section
