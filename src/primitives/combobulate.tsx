@@ -3,11 +3,11 @@ import type { AutocompleteVirtualApi } from "../core/use-autocomplete-virtual";
 import { CombobulateProvider, useCombobulateContext } from "./context";
 
 /** Props for {@link Combobulate}'s `Root` component. */
-export interface CombobulateRootProps<T> {
+export type CombobulateRootProps<T> = {
   /** The value returned by `useAutocompleteVirtual` (not the plain `useAutocomplete`). */
   api: AutocompleteVirtualApi<T>;
   children: ReactNode;
-}
+};
 
 /**
  * Root provider. Pass the value returned by `useAutocompleteVirtual` — the
@@ -25,11 +25,11 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
 }
 
 /** Props for {@link Combobulate}'s `List` component. */
-export interface CombobulateListProps<T> {
+export type CombobulateListProps<T> = {
   /** Render-prop invoked once per visible (virtualized) item. */
   children: (item: T, index: number) => ReactNode;
   style?: React.CSSProperties;
-}
+};
 
 /** Virtualized scroll container. `children` is a render-prop per visible item. */
 function List<T>({ children, style }: CombobulateListProps<T>) {
@@ -69,11 +69,11 @@ function List<T>({ children, style }: CombobulateListProps<T>) {
 }
 
 /** Props for {@link Combobulate}'s `Item` component. */
-export interface CombobulateItemProps<T> {
+export type CombobulateItemProps<T> = {
   item: T;
   index: number;
   children: ReactNode;
-}
+};
 
 /** A single option row. */
 function Item<T>({ item, index, children }: CombobulateItemProps<T>) {

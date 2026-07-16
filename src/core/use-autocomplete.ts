@@ -4,6 +4,7 @@ import { createPropGetters } from "./prop-getters";
 import type { AutocompleteApi, UseAutocompleteOptions } from "./types";
 import { useDebouncedValue } from "./use-debounced-value";
 
+/** Convert the selected items to the value type expected by the `onChange` callback. */
 function toChangeValue<T>(items: T[], multiple: boolean): T | T[] | null {
   return multiple ? items : (items[0] ?? null);
 }
@@ -58,8 +59,9 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
   const setInputValue = useCallback(
     (value: string) => {
       setInputValueState(value);
-      // Deliberate: re-highlight the first result on every keystroke so a
-      // quick Enter after typing selects the top match.
+      /** Deliberate: re-highlight the first result on every keystroke so a
+       * quick Enter after typing selects the top match.
+       */
       setActiveIndexState(0);
       onInputChange?.(value);
     },
@@ -113,6 +115,7 @@ export function useAutocomplete<T>(options: UseAutocompleteOptions<T>): Autocomp
     [getItemId],
   );
 
+  /** Generate the live-region announcement string. */
   const announcement = loading
     ? "Loading…"
     : !isOpen

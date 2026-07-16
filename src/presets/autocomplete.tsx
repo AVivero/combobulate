@@ -3,14 +3,14 @@ import { useAutocompleteVirtual } from "../core/use-autocomplete-virtual";
 import { Combobulate } from "../primitives/combobulate";
 
 /** Props for the batteries-included {@link Autocomplete} preset. */
-export interface AutocompleteProps<T> {
+export type AutocompleteProps<T> = {
   /** Full list of items to search over. */
   items: T[];
   /** Renders a single item's contents. Defaults to `String(item)`. */
   renderItem?: (item: T) => ReactNode;
   /** Accessor for an item's searchable/display text. */
   getSearchText?: (item: T) => string;
-  /** Accessor for an item's stable id. Defaults to identity via index. */
+  /** Accessor for an item's stable id. Falls back to the item's positional index. */
   getItemId?: (item: T) => string;
   /** Custom filter. Defaults to a normalized substring match. */
   filterItems?: (items: T[], query: string) => T[];
@@ -24,7 +24,7 @@ export interface AutocompleteProps<T> {
   emptyMessage?: ReactNode;
   /** External loading flag; drives the live-region announcement. */
   loading?: boolean;
-}
+};
 
 /**
  * A styled, virtualized linear autocomplete built on the Combobulate

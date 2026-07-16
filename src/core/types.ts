@@ -8,7 +8,7 @@ import type { KeyboardEvent } from "react";
  * callbacks plus `default*` seed values. Controlled `value`, `inputValue`,
  * and `open` props are not yet supported (planned for a later release).
  */
-export interface UseAutocompleteOptions<T> {
+export type UseAutocompleteOptions<T> = {
   /** Full list of items to search over. */
   items: T[];
   /** Accessor for an item's searchable/display text. */
@@ -36,10 +36,10 @@ export interface UseAutocompleteOptions<T> {
   debounce?: number;
   /** External loading flag for async data. Drives the live-region announcement. */
   loading?: boolean;
-}
+};
 
 /** Public API returned by {@link useAutocomplete}. */
-export interface AutocompleteApi<T> {
+export type AutocompleteApi<T> = {
   isOpen: boolean;
   open: () => void;
   close: () => void;
@@ -99,4 +99,4 @@ export interface AutocompleteApi<T> {
     onClick: () => void;
     onPointerMove: () => void;
   };
-}
+};

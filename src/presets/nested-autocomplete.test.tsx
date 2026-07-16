@@ -4,11 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { stubElementLayout } from "../test-utils/stub-element-layout";
 import { NestedAutocomplete } from "./nested-autocomplete";
 
-interface Node {
+type Node = {
   id: string;
   label: string;
   children?: Node[];
-}
+};
 const TREE: Node[] = [
   {
     id: "fruit",

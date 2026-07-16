@@ -6,7 +6,7 @@ import type { TreeRow } from "../tree/types";
 import { useTree } from "../tree/use-tree";
 
 /** Props for the batteries-included {@link NestedAutocomplete} preset. */
-export interface NestedAutocompleteProps<T> {
+export type NestedAutocompleteProps<T> = {
   /** Root nodes of the source tree. */
   nodes: T[];
   /** Accessor for a node's children. */
@@ -29,7 +29,7 @@ export interface NestedAutocompleteProps<T> {
   selectAllUnder?: boolean;
   /** Rendered when there are no matches. */
   emptyMessage?: ReactNode;
-}
+};
 
 /**
  * A styled, virtualized nested (tree) autocomplete built on the core + tree

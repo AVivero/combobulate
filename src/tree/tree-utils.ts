@@ -1,18 +1,18 @@
 import { normalizeText } from "../core/item-utils";
 
 /** A single node flattened out of the source tree, with structural metadata. */
-export interface FlatNode<T> {
+export type FlatNode<T> = {
   item: T;
   id: string;
   parentId: string | null;
   depth: number;
   hasChildren: boolean;
-}
+};
 
 /** A flattened node that survived visibility filtering, with its expansion state. */
-export interface VisibleRow<T> extends FlatNode<T> {
+export type VisibleRow<T> = FlatNode<T> & {
   expanded: boolean;
-}
+};
 
 /**
  * Depth-first flatten of a source tree into `FlatNode`s. The virtualizer only
@@ -106,5 +106,10 @@ export function computeVisibleRows<T>(
   }
   const keepSet = new Set(matchSet);
   for (const id of collectAncestorIds(flat, matchSet)) keepSet.add(id);
+  // Visibility here is driven purely by `keepSet` (matches + ancestors), NOT by
+  // `expandedIds`: every kept parent is reported `expanded` so matched leaves
+  // keep their context. Consequence: toggling a chevron while a query is active
+  // has no visible effect — but the toggle still mutates `expandedIds`, so the
+  // chosen expansion takes effect the moment the query is cleared.
   return flat.filter((f) => keepSet.has(f.id)).map((f) => ({ ...f, expanded: f.hasChildren }));
 }
