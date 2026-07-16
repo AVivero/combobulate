@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { useAutocompleteVirtual } from "../core/use-autocomplete-virtual";
+import { Popover } from "../floating/floating-primitives";
+import { useAutocompleteFloating } from "../floating/use-floating";
 import { Combobulate } from "../primitives/combobulate";
 
 /** Props for the batteries-included {@link Autocomplete} preset. */
@@ -57,20 +59,30 @@ export function Autocomplete<T>({
     estimateSize,
     loading,
   });
+  const floating = useAutocompleteFloating(api, { closeOnSelect: true });
   return (
     <div className="cbl-root">
       <Combobulate.Root api={api}>
-        <Combobulate.Input className="cbl-input" placeholder={placeholder} />
-        <Combobulate.List>
-          {(item: T, index: number) => (
-            <Combobulate.Item item={item} index={index}>
-              <div className="cbl-option">{renderItem(item)}</div>
-            </Combobulate.Item>
-          )}
-        </Combobulate.List>
-        <Combobulate.Empty>
-          <div className="cbl-empty">{emptyMessage}</div>
-        </Combobulate.Empty>
+        <Combobulate.Input
+          className="cbl-input"
+          placeholder={placeholder}
+          ref={floating.reference}
+          {...floating.referenceProps}
+        />
+        <Popover floating={floating}>
+          <Combobulate.List
+            style={{ position: "static", maxHeight: "none", flex: "1 1 auto", minHeight: 0 }}
+          >
+            {(item: T, index: number) => (
+              <Combobulate.Item item={item} index={index}>
+                <div className="cbl-option">{renderItem(item)}</div>
+              </Combobulate.Item>
+            )}
+          </Combobulate.List>
+          <Combobulate.Empty>
+            <div className="cbl-empty">{emptyMessage}</div>
+          </Combobulate.Empty>
+        </Popover>
         <Combobulate.LiveRegion />
       </Combobulate.Root>
     </div>

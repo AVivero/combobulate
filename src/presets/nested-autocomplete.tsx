@@ -1,5 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { useAutocompleteVirtual } from "../core/use-autocomplete-virtual";
+import { Popover } from "../floating/floating-primitives";
+import { useAutocompleteFloating } from "../floating/use-floating";
 import { Combobulate } from "../primitives/combobulate";
 import { AggregateCheckbox, Tree, TreeItem } from "../tree/tree-primitives";
 import type { TreeRow } from "../tree/types";
@@ -69,6 +71,7 @@ export function NestedAutocomplete<T>({
     multiple,
     estimateSize,
   });
+  const floating = useAutocompleteFloating(combo, { closeOnSelect: !multiple });
   const label = (item: T, meta: TreeRow<T>) =>
     renderItem ? renderItem(item, meta) : getSearchText ? getSearchText(item) : String(item);
   return (
@@ -78,37 +81,48 @@ export function NestedAutocomplete<T>({
           className="cbl-input"
           placeholder={placeholder}
           onKeyDown={tree.composeKeyDown(combo)}
+          ref={floating.reference}
+          {...floating.referenceProps}
         />
-        <Tree tree={tree} multiple={multiple}>
-          {(item: T, index: number) => {
-            const meta = tree.rows[index];
-            return (
-              <TreeItem item={item} index={index}>
-                <div className="cbl-treeitem" style={{ paddingLeft: 12 + (meta?.depth ?? 0) * 16 }}>
-                  {meta?.hasChildren ? (
-                    <button
-                      type="button"
-                      className="cbl-chevron"
-                      aria-label={meta.expanded ? "Collapse" : "Expand"}
-                      data-expanded={meta.expanded ? "" : undefined}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        tree.toggle(meta.id);
-                      }}
-                    />
-                  ) : null}
-                  {selectAllUnder && multiple && meta?.hasChildren ? (
-                    <AggregateCheckbox nodeId={meta.id} />
-                  ) : null}
-                  <span className="cbl-treeitem-label">{meta ? label(item, meta) : null}</span>
-                </div>
-              </TreeItem>
-            );
-          }}
-        </Tree>
-        <Combobulate.Empty>
-          <div className="cbl-empty">{emptyMessage}</div>
-        </Combobulate.Empty>
+        <Popover floating={floating}>
+          <Tree
+            tree={tree}
+            multiple={multiple}
+            style={{ position: "static", maxHeight: "none", flex: "1 1 auto", minHeight: 0 }}
+          >
+            {(item: T, index: number) => {
+              const meta = tree.rows[index];
+              return (
+                <TreeItem item={item} index={index}>
+                  <div
+                    className="cbl-treeitem"
+                    style={{ paddingLeft: 12 + (meta?.depth ?? 0) * 16 }}
+                  >
+                    {meta?.hasChildren ? (
+                      <button
+                        type="button"
+                        className="cbl-chevron"
+                        aria-label={meta.expanded ? "Collapse" : "Expand"}
+                        data-expanded={meta.expanded ? "" : undefined}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          tree.toggle(meta.id);
+                        }}
+                      />
+                    ) : null}
+                    {selectAllUnder && multiple && meta?.hasChildren ? (
+                      <AggregateCheckbox nodeId={meta.id} />
+                    ) : null}
+                    <span className="cbl-treeitem-label">{meta ? label(item, meta) : null}</span>
+                  </div>
+                </TreeItem>
+              );
+            }}
+          </Tree>
+          <Combobulate.Empty>
+            <div className="cbl-empty">{emptyMessage}</div>
+          </Combobulate.Empty>
+        </Popover>
         <Combobulate.LiveRegion />
       </Combobulate.Root>
     </div>
