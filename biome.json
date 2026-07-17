@@ -10,11 +10,11 @@
     "ignore": [
       "dist",
       "node_modules",
-      "examples/**/dist",
       "playwright-report",
       "test-results",
       ".claude",
-      "examples/playground/src/data/*.json"
+      "storybook-static",
+      "src/stories/data/*.json"
     ]
   }
 }

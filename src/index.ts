@@ -7,20 +7,12 @@ export type {
 } from "./core/use-autocomplete-virtual";
 import { Popover } from "./floating/floating-primitives";
 import { Combobulate as CombobulateBase } from "./primitives/combobulate";
-import { AggregateCheckbox, Tree, TreeItem } from "./tree/tree-primitives";
-/** Headless Combobulate primitives (base + tree layer + floating layer). */
-export const Combobulate = { ...CombobulateBase, Tree, TreeItem, AggregateCheckbox, Popover };
+/** Headless Combobulate primitives (base + floating layer). */
+export const Combobulate = { ...CombobulateBase, Popover };
 export type {
   CombobulateItemProps,
   CombobulateListProps,
   CombobulateRootProps,
 } from "./primitives/combobulate";
-export type { TreeItemProps, TreeProps, AggregateCheckboxProps } from "./tree/tree-primitives";
-export { useTree } from "./tree/use-tree";
-export type { TreeApi, TreeRow, TreeCombo, UseTreeOptions } from "./tree/types";
 export { useAutocompleteFloating } from "./floating/use-floating";
 export type { UseFloatingOptions, AutocompleteFloating } from "./floating/types";
-export { Autocomplete } from "./presets/autocomplete";
-export type { AutocompleteProps } from "./presets/autocomplete";
-export { NestedAutocomplete } from "./presets/nested-autocomplete";
-export type { NestedAutocompleteProps } from "./presets/nested-autocomplete";
