@@ -1,18 +1,13 @@
-export { useAutocomplete } from "./core/use-autocomplete";
-export type { AutocompleteApi, UseAutocompleteOptions } from "./core/types";
-export { useAutocompleteVirtual } from "./core/use-autocomplete-virtual";
-export type {
-  AutocompleteVirtualApi,
-  UseAutocompleteVirtualOptions,
-} from "./core/use-autocomplete-virtual";
+export { useCombobulate } from "./core/use-combobulate";
+export type { CombobulateApi, UseCombobulateOptions } from "./core/types";
+import { Combobulate as CombobulateBase } from "./core/primitives";
 import { Popover } from "./floating/floating-primitives";
-import { Combobulate as CombobulateBase } from "./primitives/combobulate";
-/** Headless Combobulate primitives (base + floating layer). */
+/** Headless Combobulate primitives (core + floating layer). */
 export const Combobulate = { ...CombobulateBase, Popover };
 export type {
   CombobulateItemProps,
   CombobulateListProps,
   CombobulateRootProps,
-} from "./primitives/combobulate";
+} from "./core/primitives";
 export { useAutocompleteFloating } from "./floating/use-floating";
 export type { UseFloatingOptions, AutocompleteFloating } from "./floating/types";

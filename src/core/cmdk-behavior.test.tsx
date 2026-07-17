@@ -31,7 +31,7 @@ import { useState } from "react";
 // `@testing-library/react`'s built-in auto-cleanup only registers itself
 // against a global `afterEach`, which Bun's test runner does not expose
 // implicitly — without this, DOM from these tests leaks into other test
-// files run in the same process. See src/primitives/combobulate.test.tsx.
+// files run in the same process. See src/core/primitives.test.tsx.
 afterEach(() => cleanup());
 
 /** Renders a plain cmdk command with filtering off — our exact usage mode. */
