@@ -105,22 +105,21 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     [onInputChange],
   );
 
+  // `onChange` fires OUTSIDE the state updater. React invokes updater
+  // functions twice in StrictMode, so a side effect inside one would fire the
+  // consumer's callback twice in dev (StrictMode is on by default in Next.js
+  // and every Vite React template). Mirrors `setSelectedItems` below.
   const select = useCallback(
     (item: T) => {
-      setSelectedItemsState((prev) => {
-        let next: T[];
-        if (multiple) {
-          next = prev.some((i) => isSameItem(i, item, getItemId))
-            ? prev.filter((i) => !isSameItem(i, item, getItemId))
-            : [...prev, item];
-        } else {
-          next = [item];
-        }
-        onChange?.(toChangeValue(next, multiple));
-        return next;
-      });
+      const next = multiple
+        ? selectedItems.some((i) => isSameItem(i, item, getItemId))
+          ? selectedItems.filter((i) => !isSameItem(i, item, getItemId))
+          : [...selectedItems, item]
+        : [item];
+      setSelectedItemsState(next);
+      onChange?.(toChangeValue(next, multiple));
     },
-    [multiple, onChange, getItemId],
+    [multiple, onChange, getItemId, selectedItems],
   );
 
   const setSelectedItems = useCallback(
@@ -137,10 +136,12 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     [selectedItems, getItemId],
   );
 
-  const announcement = loading
-    ? "Loading…"
-    : !isOpen
-      ? ""
+  // Closed is checked first: a closed combobox announces nothing, even while
+  // `loading` — its live region is not on screen to narrate.
+  const announcement = !isOpen
+    ? ""
+    : loading
+      ? "Loading…"
       : filteredItems.length === 0
         ? "No results"
         : `${filteredItems.length} result${filteredItems.length === 1 ? "" : "s"}`;

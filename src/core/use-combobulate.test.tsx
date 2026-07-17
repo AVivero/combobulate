@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
+import { StrictMode } from "react";
 import { stubElementLayout } from "../test-utils/stub-element-layout";
 import { useCombobulate } from "./use-combobulate";
 
@@ -34,6 +35,16 @@ test("single select replaces and reports the item", () => {
   act(() => result.current.select("Berlin"));
   expect(result.current.selectedItems).toEqual(["Berlin"]);
   expect(seen).toEqual(["Paris", "Berlin"]);
+});
+
+test("select fires onChange once per call, even under StrictMode", () => {
+  const seen: unknown[] = [];
+  const { result } = renderHook(
+    () => useCombobulate({ items: ITEMS, onChange: (v) => seen.push(v) }),
+    { wrapper: StrictMode },
+  );
+  act(() => result.current.select("Paris"));
+  expect(seen).toEqual(["Paris"]);
 });
 
 test("multi select toggles membership", () => {
@@ -105,4 +116,11 @@ test("announcement reflects loading, empty, and counts", () => {
   expect(result.current.announcement).toBe("No results");
   act(() => result.current.setInputValue("par"));
   expect(result.current.announcement).toBe("1 result");
+});
+
+test("announcement is silent when closed, even while loading", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, defaultOpen: false, loading: true }),
+  );
+  expect(result.current.announcement).toBe("");
 });
