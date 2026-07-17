@@ -10,7 +10,7 @@ import {
   useInteractions,
 } from "@floating-ui/react";
 import { useEffect, useRef } from "react";
-import type { AutocompleteVirtualApi } from "../core/use-autocomplete-virtual";
+import type { CombobulateApi } from "../core/types";
 import type { AutocompleteFloating, UseFloatingOptions } from "./types";
 
 /**
@@ -19,7 +19,7 @@ import type { AutocompleteFloating, UseFloatingOptions } from "./types";
  * on outside-click/Escape — driving the combo's own open state.
  */
 export function useAutocompleteFloating<T>(
-  api: AutocompleteVirtualApi<T>,
+  api: CombobulateApi<T>,
   options: UseFloatingOptions = {},
 ): AutocompleteFloating {
   const {

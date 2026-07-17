@@ -1,0 +1,53 @@
+/*
+ * Combobulate ships no styles of its own. This is the minimal, self-contained
+ * CSS the Storybook demos share so the dropdown is legible: a bordered card
+ * around the combobox, and a highlight on the active row (cmdk marks it with
+ * `[cmdk-item][data-selected="true"]`, the row `aria-activedescendant` points
+ * at). Not a design system.
+ */
+
+[cmdk-root] {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #18181b;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+[cmdk-input] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #d4d4d8;
+  border-radius: 6px;
+  outline: none;
+}
+
+[cmdk-input]:focus {
+  border-color: #6366f1;
+}
+
+[cmdk-list] {
+  margin-top: 8px;
+}
+
+[cmdk-item] {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+[cmdk-item][data-selected="true"] {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+[cmdk-item][aria-checked="true"] {
+  font-weight: 600;
+}

@@ -1,8 +1,10 @@
 node_modules/
 dist/
+storybook-static/
 .DS_Store
 *.log
 coverage/
 .turbo/
 test-results/
 playwright-report/
+.superpowers/

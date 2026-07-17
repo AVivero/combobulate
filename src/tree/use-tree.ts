@@ -1,3 +1,12 @@
+/**
+ * PARKED — not part of the v1 public surface.
+ *
+ * The nested tree layer is frozen while the core is rebuilt on cmdk. This
+ * directory is excluded from tsconfig/build and exports, and is retained
+ * verbatim so it can be re-homed onto the cmdk core when nesting is un-parked.
+ * It does NOT compile against the current core types. See
+ * docs/superpowers/specs/2026-07-16-combobulate-cmdk-rebuild-design.md §2.
+ */
 import { useCallback, useMemo, useRef, useState } from "react";
 import { defaultGetSearchText } from "../core/item-utils";
 import { collectDescendantLeafIds, computeVisibleRows, flattenTree } from "./tree-utils";

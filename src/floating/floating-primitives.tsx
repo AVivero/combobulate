@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useCombobulateContext } from "../primitives/context";
+import { useCombobulateContext } from "../core/context";
 import type { AutocompleteFloating } from "./types";
 
 /** Props for {@link Popover}. */

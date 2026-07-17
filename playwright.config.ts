@@ -4,10 +4,10 @@ export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.e2e.ts",
   webServer: {
-    command: "bun run dev",
-    url: "http://localhost:5173",
+    command: "bun run storybook",
+    url: "http://localhost:6006",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
-  use: { baseURL: "http://localhost:5173" },
+  use: { baseURL: "http://localhost:6006" },
 });

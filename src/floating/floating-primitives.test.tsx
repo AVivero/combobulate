@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { cleanup, render, screen } from "@testing-library/react";
-import { useAutocompleteVirtual } from "../core/use-autocomplete-virtual";
-import { Combobulate } from "../primitives/combobulate";
+import { Combobulate } from "../core/primitives";
+import { useCombobulate } from "../core/use-combobulate";
 import { stubElementLayout } from "../test-utils/stub-element-layout";
 import { Popover } from "./floating-primitives";
 import { useAutocompleteFloating } from "./use-floating";
@@ -9,7 +9,7 @@ import { useAutocompleteFloating } from "./use-floating";
 afterEach(() => cleanup());
 
 function Demo({ open }: { open: boolean }) {
-  const api = useAutocompleteVirtual({ items: ["Paris"], defaultOpen: open });
+  const api = useCombobulate({ items: ["Paris"], defaultOpen: open });
   const floating = useAutocompleteFloating(api);
   return (
     <Combobulate.Root api={api}>
