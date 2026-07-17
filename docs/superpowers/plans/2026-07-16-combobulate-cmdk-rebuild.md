@@ -433,12 +433,23 @@ test("multi select toggles membership", () => {
   expect(result.current.isSelected("Berlin")).toBe(true);
 });
 
-test("itemValue is stable, lowercase, and maps back to the filtered index", () => {
-  const { result } = renderHook(() => useCombobulate({ items: ITEMS }));
+test("itemValue is the id verbatim and maps back to the filtered index", () => {
+  const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
   const value = result.current.itemValue("Madrid", 1);
-  expect(value).toBe(value.toLowerCase());
+  // Verbatim — not case-folded. cmdk round-trips it unchanged.
+  expect(value).toBe("Madrid");
   act(() => result.current.setActiveValue(value));
   expect(result.current.activeIndex).toBe(1);
+});
+
+test("ids differing only in case are distinct items, not a collision", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ["AB", "ab"], getItemId: (c) => c }),
+  );
+  act(() => result.current.setActiveValue(result.current.itemValue("ab", 1)));
+  expect(result.current.activeIndex).toBe(1);
+  act(() => result.current.setActiveValue(result.current.itemValue("AB", 0)));
+  expect(result.current.activeIndex).toBe(0);
 });
 
 test("activeIndex is -1 when the active value is not in the filtered list", () => {
@@ -512,8 +523,8 @@ export type UseCombobulateOptions<T> = {
   getSearchText?: (item: T) => string;
   /**
    * Accessor for an item's stable id. Falls back to the positional index.
-   * Ids must be unique **case-insensitively** — they become cmdk item values,
-   * which are normalized to lowercase (see {@link CombobulateApi.itemValue}).
+   * Ids must be unique — they become cmdk item values (see
+   * {@link CombobulateApi.itemValue}).
    */
   getItemId?: (item: T) => string;
   /** Custom filter. Defaults to a normalized substring match. */
@@ -547,10 +558,7 @@ export type CombobulateApi<T> = {
   inputValue: string;
   setInputValue: (value: string) => void;
   filteredItems: T[];
-  /**
-   * cmdk's highlighted item value (the controlled `value` on `<Command>`).
-   * Always lowercase — see {@link CombobulateApi.itemValue}.
-   */
+  /** cmdk's highlighted item value (the controlled `value` on `<Command>`). */
   activeValue: string;
   setActiveValue: (value: string) => void;
   /** Index of {@link CombobulateApi.activeValue} in `filteredItems`, or -1. */
@@ -563,9 +571,13 @@ export type CombobulateApi<T> = {
   /** Resolve an item's logical id (caller's `getItemId`, else the index). */
   getItemId: (item: T, index: number) => string;
   /**
-   * The item's cmdk `value` string: the logical id, trimmed and lowercased.
-   * Normalized because cmdk may case-fold values internally; emitting
-   * lowercase makes the `onValueChange` round-trip stable either way.
+   * The item's cmdk `value` string: the logical id, used verbatim.
+   *
+   * cmdk emits `value` back through `onValueChange` unchanged — no
+   * case-folding, no trimming (pinned by `cmdk-behavior.test.tsx`), so the
+   * round-trip through `valueToIndex` needs no normalization. Deliberately
+   * NOT lowercased: that would make ids differing only in case collide
+   * silently in the map.
    */
   itemValue: (item: T, index: number) => string;
   /** Screen-reader announcement string (result count / no-results / loading). */
@@ -639,8 +651,11 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     [getItemId],
   );
 
+  // Used verbatim: cmdk round-trips `value` through `onValueChange` unchanged
+  // (pinned by cmdk-behavior.test.tsx), so no normalization is needed — and
+  // lowercasing would make ids differing only in case collide in the map below.
   const itemValue = useCallback(
-    (item: T, index: number) => getItemIdCb(item, index).trim().toLowerCase(),
+    (item: T, index: number) => getItemIdCb(item, index),
     [getItemIdCb],
   );
 
