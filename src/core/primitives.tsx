@@ -49,6 +49,7 @@ const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputEl
     const own = {
       value: api.inputValue,
       onFocus: () => api.setOpen(true),
+      onKeyDown: api.onInputKeyDown,
     };
     const merged = mergeProps(own, props);
     return (

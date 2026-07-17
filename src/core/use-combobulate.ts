@@ -1,5 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { defaultFilterItems, defaultGetSearchText, isSameItem } from "./item-utils";
 import type { CombobulateApi, UseCombobulateOptions } from "./types";
 
@@ -7,6 +7,10 @@ import type { CombobulateApi, UseCombobulateOptions } from "./types";
 function toChangeValue<T>(items: T[], multiple: boolean): T | T[] | null {
   return multiple ? items : (items[0] ?? null);
 }
+
+/** Rows moved per PageUp/PageDown. A fixed page keeps the jump predictable
+ *  across variable-height rows, where a measured "viewport of rows" would not. */
+const PAGE_SIZE = 10;
 
 /**
  * Orchestration hook for a cmdk-backed, virtualized combobox.
@@ -109,6 +113,12 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
   // functions twice in StrictMode, so a side effect inside one would fire the
   // consumer's callback twice in dev (StrictMode is on by default in Next.js
   // and every Vite React template). Mirrors `setSelectedItems` below.
+  //
+  // Reads render-scoped `selectedItems` rather than the updater's `prev`, so
+  // it is intended to be called ONCE PER USER EVENT — two `select()` calls
+  // batched in the same tick would drop the first. A caller that needs to
+  // batch several changes at once should use `setSelectedItems` instead,
+  // which takes the whole array.
   const select = useCallback(
     (item: T) => {
       const next = multiple
@@ -136,6 +146,45 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     [selectedItems, getItemId],
   );
 
+  const filteredRef = useRef(filteredItems);
+  filteredRef.current = filteredItems;
+  const activeIndexRef = useRef(activeIndex);
+  activeIndexRef.current = activeIndex;
+
+  const onInputKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      const rows = filteredRef.current;
+      if (rows.length === 0) return;
+      const current = activeIndexRef.current;
+      const last = rows.length - 1;
+
+      let target: number | null = null;
+      if (event.key === "Home") target = 0;
+      else if (event.key === "End") target = last;
+      else if (event.key === "PageDown")
+        target = Math.min((current < 0 ? 0 : current) + PAGE_SIZE, last);
+      else if (event.key === "PageUp")
+        target = Math.max((current < 0 ? 0 : current) - PAGE_SIZE, 0);
+      if (target === null) return;
+
+      const item = rows[target];
+      if (item === undefined) return;
+
+      // cmdk binds Home/End on the <Command> root and would otherwise move the
+      // highlight to the first/last *mounted* row. Our handler sits on the
+      // input, which fires first, so stopping propagation preempts it.
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Scroll first so the target row mounts, then hand cmdk the value: once
+      // the row is in the DOM cmdk resolves it through its normal controlled
+      // `value` path and re-points aria-activedescendant at it.
+      virtualizer.scrollToIndex(target, { align: "center" });
+      setActiveValue(itemValue(item, target));
+    },
+    [virtualizer, itemValue],
+  );
+
   // Closed is checked first: a closed combobox announces nothing, even while
   // `loading` — its live region is not on screen to narrate.
   const announcement = !isOpen
@@ -156,6 +205,7 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     filteredItems,
     activeValue,
     setActiveValue,
+    onInputKeyDown,
     activeIndex,
     selectedItems,
     select,

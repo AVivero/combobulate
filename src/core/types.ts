@@ -53,6 +53,13 @@ export type CombobulateApi<T> = {
   /** cmdk's highlighted item value (the controlled `value` on `<Command>`). */
   activeValue: string;
   setActiveValue: (value: string) => void;
+  /**
+   * Keydown handler for the input. Implements the jump keys cmdk cannot get
+   * right under virtualization (Home/End/PageUp/PageDown target the whole
+   * filtered list, not the mounted window) and passes every other key through
+   * to cmdk untouched.
+   */
+  onInputKeyDown: (event: import("react").KeyboardEvent) => void;
   /** Index of {@link CombobulateApi.activeValue} in `filteredItems`, or -1. */
   activeIndex: number;
   selectedItems: T[];
