@@ -1064,13 +1064,17 @@ function Item<T>({ item, index, children }: CombobulateItemProps<T>) {
   );
 }
 
-/** Rendered when there are no filtered items. */
+/**
+ * Rendered when there are no filtered items. Presentational only — NOT a live
+ * region. `LiveRegion` is the sole `role="status"` announcer; making `Empty` a
+ * second one (e.g. via `<output>`, which carries an implicit `role="status"`)
+ * would announce "No results" twice. A plain `<div>` with no role also lints
+ * clean, since Biome's `useSemanticElements` only fires when a `role` is set.
+ */
 function Empty({ children }: { children: ReactNode }) {
   const api = useCombobulateContext();
   if (!api.isOpen || api.filteredItems.length > 0) return null;
-  // <output> carries an implicit `role="status"`, satisfying Biome's
-  // useSemanticElements rule while keeping the same accessible role.
-  return <output>{children}</output>;
+  return <div>{children}</div>;
 }
 
 /**

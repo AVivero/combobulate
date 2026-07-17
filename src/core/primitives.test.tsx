@@ -59,11 +59,15 @@ test("multi-select marks chosen state with aria-checked, single-select does not"
 test("Empty renders only when nothing matches", () => {
   render(<Harness items={[]} />);
   // `LiveRegion`'s announcement is also the literal string "No results" when
-  // `filteredItems` is empty, and both it and `Empty` render an `<output>`
-  // element (see the ARIA note on `LiveRegion`), so an unscoped `getByText`
-  // matches both — scope to the one `<output>` without `aria-live` (that's
-  // `Empty`'s; `LiveRegion` always carries `aria-live="polite"`).
-  expect(screen.getByText("No results", { selector: "output:not([aria-live])" })).toBeDefined();
+  // `filteredItems` is empty (see `use-combobulate.ts`), so an unscoped
+  // `getByText` still matches both elements by *text*. That's expected and
+  // fine now — `Empty` scopes to its own tag (a plain `<div>`, no role)
+  // rather than the old `output:not([aria-live])` hack that was really
+  // disambiguating two competing `role="status"` announcers.
+  screen.getByText("No results", { selector: "div" });
+  // The real point of this fix: `Empty` must not introduce a second
+  // `role="status"` element. `LiveRegion` remains the sole one.
+  expect(screen.getAllByRole("status")).toHaveLength(1);
 });
 
 test("LiveRegion announces the result count", () => {
