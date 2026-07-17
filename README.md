@@ -1,11 +1,30 @@
 # combobulate
 
-**The headless toolkit for accessible, virtualized autocompletes.**
+**A headless, accessible, properly virtualized combobox — built on [cmdk](https://cmdk.paco.me).**
 
-Combobulate gives you a fully accessible, keyboard-navigable combobox that
-stays smooth at 10,000+ items — without forcing you into its markup or its
-styles. Use the batteries-included preset, compose the headless primitives
-into your own design system, or drop straight into the state machine.
+Combobulate is the integration layer, not another combobox engine. cmdk owns
+keyboard navigation, option roles, and the highlighted item. TanStack Virtual
+owns windowing. Floating UI owns positioning. Combobulate owns the seam none of
+them cover: **making a virtualized list actually accessible.**
+
+## Why
+
+A combobox announces "item 2,847 of 3,300" and jumps to the last result with
+`End`. A virtualizer only mounts what's on screen — so it can't know either.
+Pair them naively and you get a list that *looks* right and lies to screen
+readers: no `aria-setsize`, no `aria-posinset`, and `End` that lands on the last
+row that happens to be mounted rather than the last row that exists.
+
+Combobulate closes that gap:
+
+- **The active row is always mounted.** cmdk moves the highlight, combobulate
+  scrolls that index into view, so `aria-activedescendant` always resolves.
+- **Full-list ARIA.** `aria-setsize`/`aria-posinset` come from the filtered data,
+  not the mounted window.
+- **Correct jump keys.** `Home`/`End`/`PageUp`/`PageDown` target the whole list —
+  scroll the true target into mount, then hand cmdk the value. This is verified
+  end-to-end in a real browser; it's the thing most cmdk-based comboboxes don't
+  get right once the list is virtualized.
 
 ## Install
 
@@ -13,135 +32,91 @@ into your own design system, or drop straight into the state machine.
 bun add combobulate
 ```
 
-Combobulate ships `react`, `react-dom`, and `@tanstack/react-virtual` as
-**peer dependencies** — install them alongside it if your project doesn't
-already have them:
+Only `react` and `react-dom` are peers. cmdk, TanStack Virtual, and Floating UI
+come along as regular dependencies — one install, no extra peer setup.
 
-```sh
-bun add react react-dom @tanstack/react-virtual
-```
-
-## Three ways to use it
-
-### 1. The styled preset — `<Autocomplete>`
-
-Batteries included: a virtualized, accessible combobox with class names
-(`cbl-*`) and `data-*` hooks that `combobulate/styles.css` targets.
+## Use
 
 ```tsx
-import { Autocomplete } from "combobulate";
-import "combobulate/styles.css"; // optional, but gives you a ready-made look
+import { Combobulate, useCombobulate } from "combobulate";
 
-const CITIES = ["Paris", "Madrid", "Berlin", /* …thousands more */];
-
-function App() {
-  return (
-    <Autocomplete
-      items={CITIES}
-      placeholder="Search cities…"
-      onChange={(value) => console.log(value)}
-    />
-  );
-}
-```
-
-`<Autocomplete>` accepts `items`, `renderItem`, `getSearchText`,
-`getItemId`, `filterItems`, `onChange`, `onInputChange`, `loading`,
-`placeholder`, `estimateSize`, and `emptyMessage` — see
-[`AutocompleteProps`](./src/presets/autocomplete.tsx) for the full list.
-`onInputChange` + `loading` are the hooks for async/remote search: fire a
-request as the user types, flip `loading` on, and the live region
-announces it.
-
-### 2. Headless primitives — `useAutocompleteVirtual` + `Combobulate.*`
-
-Own the markup and styling; Combobulate owns the state, the ARIA wiring,
-and the virtualization↔accessibility bridge.
-
-```tsx
-import { Combobulate, useAutocompleteVirtual } from "combobulate";
+const CITIES = ["Paris", "Madrid", "Berlin" /* …thousands more */];
 
 function CityPicker() {
-  const api = useAutocompleteVirtual({ items: CITIES, defaultOpen: true });
+  const api = useCombobulate({ items: CITIES, getItemId: (c) => c });
 
   return (
-    <Combobulate.Root api={api}>
-      <Combobulate.Input aria-label="City" />
-      <Combobulate.List>
+    <Combobulate.Root api={api} label="Cities">
+      <Combobulate.Input aria-label="City" placeholder="Search cities…" />
+      <Combobulate.List<string>>
         {(item, index) => (
           <Combobulate.Item item={item} index={index}>
-            {String(item)}
+            {item}
           </Combobulate.Item>
         )}
       </Combobulate.List>
       <Combobulate.Empty>No results</Combobulate.Empty>
+      <Combobulate.LiveRegion />
     </Combobulate.Root>
   );
 }
 ```
 
-### 3. The pure state machine — `useAutocomplete`
+Combobulate ships **no styles** — every element above is unstyled, yours to
+class up however your design system works.
 
-For full control with no virtualization and no primitives at all, the
-plain `useAutocomplete` hook returns the same open/filter/select state
-machine and prop getters — bring your own list rendering (or roll your
-own virtualizer integration).
+Note the explicit `<string>` on `Combobulate.List` — its item type only shows
+up in the render-prop's parameter, so TypeScript can't infer it from the call
+site; annotate it with your item type (`Combobulate.List<Airport>`, etc.).
 
-## Nested tree
+## Filtering
 
-The tree layer is an opt-in composition on top of the tree-unaware core —
-your `nodes`/`items` never need to know a tree exists.
+The default is a diacritic-insensitive substring match. Bring your own matcher
+(Fuse.js, match-sorter, a remote API) with `filterItems`:
 
 ```tsx
-import { NestedAutocomplete } from "combobulate";
-import "combobulate/styles.css";
+const fuse = new Fuse(AIRPORTS, { keys: ["city", "iata"], threshold: 0.3 });
 
-<NestedAutocomplete
-  nodes={nodes}
-  getChildren={(n) => n.children}
-  getItemId={(n) => n.id}
-  getSearchText={(n) => n.label}
-  multiple
-  selectAllUnder
-/>;
+useCombobulate({
+  items: AIRPORTS,
+  getItemId: (a) => a.iata,
+  filterItems: (items, query) => (query ? fuse.search(query).map((r) => r.item) : items),
+});
 ```
 
-`useTree` is the headless hook underneath: it owns `expandedIds` and emits
-a flat visible list (`items` + index-aligned `rows`) that feeds
-`useAutocompleteVirtual` directly. `←`/`→` expand/collapse the active row,
-and `selectAllUnder` adds a tri-state "select all under node" control
-(multi-select only) that selects or deselects every leaf beneath a node in
-one update.
-
-See the [tree layer design spec](./docs/superpowers/specs/2026-07-15-combobulate-tree-layer-design.md)
-for the full architecture.
+For remote/async search, own the `items` array yourself (e.g. in `useState`),
+pass it in, and set `loading` while a request is in flight — the live region
+announces it. `onInputChange` fires on every keystroke so you can trigger the
+request; since the server already ranks results, pass `filterItems: (list) => list`
+to skip re-filtering client-side.
 
 ## Floating dropdown
 
-The presets (`<Autocomplete>`, `<NestedAutocomplete>`) render the dropdown as a
-**collision-aware floating overlay** by default: it anchors to the input, flips
-above when there's no room below, matches the input width, caps its height to
-the viewport, and dismisses on outside-click or Escape (single-select also
-closes on pick). No layout shift, no setup.
-
-For the headless primitives, opt in with `useAutocompleteFloating` +
-`<Combobulate.Popover>`:
+Opt in with `useAutocompleteFloating` + `Combobulate.Popover`: anchors to the
+input, flips when there's no room below, matches the input width, caps its
+height to the viewport, and dismisses on outside-click or Escape (and on
+select, if `closeOnSelect` is set).
 
 ```tsx
-import { Combobulate, useAutocompleteVirtual, useAutocompleteFloating } from "combobulate";
+import type { Ref } from "react";
+import { Combobulate, useAutocompleteFloating, useCombobulate } from "combobulate";
 
 function CityPicker() {
-  const combo = useAutocompleteVirtual({ items: CITIES });
-  const floating = useAutocompleteFloating(combo, { closeOnSelect: true });
+  const api = useCombobulate({ items: CITIES, getItemId: (c) => c });
+  const floating = useAutocompleteFloating(api, { closeOnSelect: true });
 
   return (
-    <Combobulate.Root api={combo}>
-      <Combobulate.Input ref={floating.reference} {...floating.referenceProps} />
+    <Combobulate.Root api={api} label="Cities">
+      <Combobulate.Input
+        ref={floating.reference as unknown as Ref<HTMLInputElement>}
+        {...floating.referenceProps}
+        aria-label="City"
+      />
       <Combobulate.Popover floating={floating}>
-        <Combobulate.List>
+        <Combobulate.List<string>>
           {(item, index) => (
             <Combobulate.Item item={item} index={index}>
-              {String(item)}
+              {item}
             </Combobulate.Item>
           )}
         </Combobulate.List>
@@ -151,55 +126,25 @@ function CityPicker() {
 }
 ```
 
-Positioning is powered by [`@floating-ui/react`](https://floating-ui.com), which
-is bundled **only** when you import the floating layer — the core and base
-primitives stay positioning-agnostic, so a non-floating list costs you nothing.
+`floating.reference` is untyped as a generic `Element` callback ref, hence the
+cast when attaching it to an `<input>`.
 
-## Examples — travel showcase
+## Examples
 
-`examples/playground` is a Google-Flights-style showcase built on real
-airport data (~3,300 scheduled-service airports from OurAirports):
+Storybook is the demo surface and the integration docs — basic usage, async
+typeahead (Fuse-ranked remote search), multi-select chips, ~3,300 real
+airports in one virtualized list, and the floating dropdown:
 
 ```sh
-cd examples/playground
-bun install
-bun run dev
+bun run storybook
 ```
 
-It demonstrates the patterns that matter in production autocompletes:
+## Roadmap
 
-- **Flight search hero** — Origin→Destination on the headless primitives,
-  rich rows (city · airport · IATA badge), metro-area rollups, and a swap.
-- **Nested geography** — Country → City → Airport with `NestedAutocomplete`
-  and select-all-under ("all NYC airports").
-- **Async typeahead** — remote-search simulation with `loading`, skeletons,
-  and live-region announcements.
-- **Multi-select chips** — removable chips driven by the hook's selection.
-- **World airports** — ~3,300 real airports in one virtualized list.
-
-Each section is styled with a **different** system — Tailwind or Emotion,
-with a shared light/dark token layer — to show Combobulate imposes no
-styling opinion. The airport data is committed; rebuild it with
-`bun scripts/build-airports.ts`.
-
-## Why
-
-Virtualized lists and accessible comboboxes fight each other: a combobox
-needs `aria-activedescendant` to point at a real, mounted DOM node, but a
-virtualizer only mounts what's on screen. Combobulate owns that seam —
-the active index lives in state (not the DOM), and
-`useAutocompleteVirtual` bridges it to TanStack Virtual by calling
-`scrollToIndex` whenever it changes, guaranteeing the highlighted option
-is always mounted. `aria-setsize` and `aria-posinset` are derived from the
-same filtered-item data driving the render, so assistive tech always
-reports accurate list position even when most of the list is virtualized
-out of the DOM.
-
-## Learn more
-
-See the [design spec](./docs/superpowers/specs/2026-07-14-combobulate-design.md)
-for the full architecture: layering, the accessibility/virtualization
-bridge, filtering and async semantics, and the tree layer.
+A nested-tree layer (expand/collapse, virtualized `role="tree"`,
+select-all-under-node) is **parked**, not shipped. Its source lives in
+`src/tree/`, retained but excluded from this build — it needs a fresh design
+pass on top of the cmdk-backed core before it ships.
 
 ## License
 
