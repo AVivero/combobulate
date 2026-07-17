@@ -12,6 +12,12 @@ function toChangeValue<T>(items: T[], multiple: boolean): T | T[] | null {
  *  across variable-height rows, where a measured "viewport of rows" would not. */
 const PAGE_SIZE = 10;
 
+/** Max frames a jump waits for its target row to mount before giving up on the
+ *  synthetic-pointer path (see `onInputKeyDown`). A large scroll can take a few
+ *  frames to commit the row; a row that never lays out (the unit environment)
+ *  falls through to the state-only fallback after this many. */
+const JUMP_MOUNT_FRAMES = 20;
+
 /**
  * Orchestration hook for a cmdk-backed, virtualized combobox.
  *
@@ -151,6 +157,18 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
   const activeIndexRef = useRef(activeIndex);
   activeIndexRef.current = activeIndex;
 
+  // Holds the rAF handle of a pending deferred jump commit (see below), so a
+  // second jump before the frame fires cancels the first instead of letting
+  // two deferred commits race.
+  const pendingJumpRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (pendingJumpRef.current !== null) cancelAnimationFrame(pendingJumpRef.current);
+    },
+    [],
+  );
+
   const onInputKeyDown = useCallback(
     (event: KeyboardEvent) => {
       const rows = filteredRef.current;
@@ -176,11 +194,86 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
       event.preventDefault();
       event.stopPropagation();
 
-      // Scroll first so the target row mounts, then hand cmdk the value: once
-      // the row is in the DOM cmdk resolves it through its normal controlled
-      // `value` path and re-points aria-activedescendant at it.
-      virtualizer.scrollToIndex(target, { align: "center" });
-      setActiveValue(itemValue(item, target));
+      if (pendingJumpRef.current !== null) {
+        cancelAnimationFrame(pendingJumpRef.current);
+        pendingJumpRef.current = null;
+      }
+
+      const value = itemValue(item, target);
+
+      // Why not just `setActiveValue(value)`? Because cmdk 1.1.1 binds the
+      // input's `aria-activedescendant` solely to its internal `selectedItemId`,
+      // and that is recomputed in exactly ONE place — cmdk's internal
+      // `store.setState("value", …)`, reached only from cmdk's own keyboard
+      // handlers or an item's `onPointerMove`/`onClick`. A change to the
+      // controlled `<Command value>` prop updates which row is `aria-selected`
+      // but never recomputes `selectedItemId`, so a prop-driven jump leaves
+      // `aria-activedescendant` stale/null. (Root-cause detail in
+      // .superpowers/sdd/task-5-report.md, confirmed against
+      // node_modules/cmdk/dist/index.mjs in a real browser.)
+      //
+      // The fix: once the target row is in the DOM, dispatch a synthetic
+      // `pointermove` at its cmdk item so cmdk's OWN `onPointerMove` runs the
+      // internal `setState("value", …)` that recomputes `selectedItemId` and
+      // re-points `aria-activedescendant`. cmdk's `onPointerMove` also fires
+      // `onValueChange`, forwarded by `<Command onValueChange={setActiveValue}>`,
+      // so this updates our `activeValue`/`activeIndex` too.
+      const cell = (i: number) =>
+        scrollRef.current?.querySelector(`[data-index="${i}"] [cmdk-item]`) ?? null;
+
+      const tryDispatch = () => {
+        const node = cell(target);
+        if (!node) return false;
+        // cmdk skips the `selectedItemId` recompute when the new value equals
+        // the current one (`Object.is` guard). After a large scroll, cmdk's
+        // own unmount handling can already have set the value to the target
+        // (it re-selects the first mounted row when the selected row unmounts),
+        // leaving a stale/null `selectedItemId` that a plain dispatch on the
+        // target can't dislodge — confirmed in a real browser. So "wiggle":
+        // dispatch on an adjacent mounted row FIRST (guaranteed a different
+        // value), then on the target, forcing a clean recompute that lands on
+        // the target. The intermediate value change is coalesced by React, so
+        // no intermediate render/scroll is observable.
+        const neighbor = cell(target + 1) ?? cell(target - 1);
+        if (neighbor) neighbor.dispatchEvent(new PointerEvent("pointermove", { bubbles: true }));
+        node.dispatchEvent(new PointerEvent("pointermove", { bubbles: true }));
+        setActiveValue(value);
+        return true;
+      };
+
+      // Scroll now — this mounts the target row. `scrollToIndex` over a large
+      // distance can take more than one frame to commit the destination row,
+      // and dispatching into a not-yet-mounted row silently no-ops, so poll
+      // across frames until it mounts. Bounded so a row that never lays out
+      // (the unit environment, which has no scroll container) falls through to
+      // a state-only commit rather than looping forever.
+      let attempt = 0;
+      const commit = () => {
+        virtualizer.scrollToIndex(target, { align: "center" });
+        // Force a synchronous range recompute: the virtualizer only re-renders
+        // its mounted window in response to a scroll EVENT, which the browser
+        // fires asynchronously after `scrollToIndex` sets `scrollTop`. We
+        // dispatch one synchronously so the virtualizer's own scroll handler
+        // runs now (it commits the new range via `flushSync`), mounting the
+        // target row within this call — so the pointer dispatch below can land
+        // before the handler returns, beating the e2e's immediate aria read.
+        scrollRef.current?.dispatchEvent(new Event("scroll"));
+        if (tryDispatch()) {
+          pendingJumpRef.current = null;
+          return;
+        }
+        attempt += 1;
+        if (attempt > JUMP_MOUNT_FRAMES) {
+          // Never laid out (the unit environment) — commit our own state so
+          // `activeValue`/`activeIndex` still reflect the jump;
+          // `aria-activedescendant` is then the e2e's concern.
+          setActiveValue(value);
+          pendingJumpRef.current = null;
+          return;
+        }
+        pendingJumpRef.current = requestAnimationFrame(commit);
+      };
+      commit();
     },
     [virtualizer, itemValue],
   );
