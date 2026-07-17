@@ -1,19 +1,23 @@
-import type { KeyboardEvent } from "react";
+import type { Virtualizer } from "@tanstack/react-virtual";
+import type { RefObject } from "react";
 
 /**
- * Options accepted by {@link useAutocomplete}. Deliberately tree-unaware.
+ * Options accepted by {@link useCombobulate}. Deliberately tree-unaware.
  *
  * This hook is **uncontrolled**: selection, input text, and open state are
  * owned internally and surfaced via `onChange`/`onInputChange`/`onOpenChange`
- * callbacks plus `default*` seed values. Controlled `value`, `inputValue`,
- * and `open` props are not yet supported (planned for a later release).
+ * callbacks plus `default*` seed values.
  */
-export type UseAutocompleteOptions<T> = {
+export type UseCombobulateOptions<T> = {
   /** Full list of items to search over. */
   items: T[];
   /** Accessor for an item's searchable/display text. */
   getSearchText?: (item: T) => string;
-  /** Accessor for an item's stable id. Falls back to positional index. */
+  /**
+   * Accessor for an item's stable id. Falls back to the positional index.
+   * Ids must be unique — they become cmdk item values (see
+   * {@link CombobulateApi.itemValue}).
+   */
   getItemId?: (item: T) => string;
   /** Custom filter. Defaults to a normalized substring match. */
   filterItems?: (items: T[], query: string) => T[];
@@ -31,10 +35,14 @@ export type UseAutocompleteOptions<T> = {
   multiple?: boolean;
   /** External loading flag for async data. Drives the live-region announcement. */
   loading?: boolean;
+  /** Estimated row height in px. Required by TanStack Virtual. Default 32. */
+  estimateSize?: (index: number) => number;
+  /** Rows to render above/below the viewport. Default 8. */
+  overscan?: number;
 };
 
-/** Public API returned by {@link useAutocomplete}. */
-export type AutocompleteApi<T> = {
+/** Public API returned by {@link useCombobulate}. */
+export type CombobulateApi<T> = {
   isOpen: boolean;
   open: () => void;
   close: () => void;
@@ -42,56 +50,36 @@ export type AutocompleteApi<T> = {
   inputValue: string;
   setInputValue: (value: string) => void;
   filteredItems: T[];
+  /** cmdk's highlighted item value (the controlled `value` on `<Command>`). */
+  activeValue: string;
+  setActiveValue: (value: string) => void;
+  /** Index of {@link CombobulateApi.activeValue} in `filteredItems`, or -1. */
   activeIndex: number;
-  setActiveIndex: (index: number) => void;
-  moveActive: (delta: number) => void;
   selectedItems: T[];
   select: (item: T) => void;
   /** Replace the entire selection in one update. Fires `onChange` once. */
   setSelectedItems: (items: T[]) => void;
-  /**
-   * Resolve an item's **logical** id (the caller's `getItemId` accessor, or
-   * the item's positional index as a fallback). This is not the rendered DOM
-   * id: `getItemProps`/`getInputProps` namespace it as `${listId}-${logicalId}`
-   * so multiple combobox instances on one page never collide.
-   */
+  isSelected: (item: T) => boolean;
+  /** Resolve an item's logical id (caller's `getItemId`, else the index). */
   getItemId: (item: T, index: number) => string;
-  /** Stable id of the listbox element, used to wire `aria-controls`/`aria-activedescendant`. */
-  listId: string;
+  /**
+   * The item's cmdk `value` string: the logical id, used verbatim.
+   *
+   * cmdk emits `value` back through `onValueChange` unchanged — no
+   * case-folding, no trimming (pinned by `cmdk-behavior.test.tsx`), so the
+   * round-trip through `valueToIndex` needs no normalization. Deliberately
+   * NOT lowercased: that would make ids differing only in case collide
+   * silently in the map.
+   */
+  itemValue: (item: T, index: number) => string;
   /** Screen-reader announcement string (result count / no-results / loading). */
   announcement: string;
-  /** Props for a visually-hidden polite live region. */
-  getLiveRegionProps: () => {
-    role: "status";
-    "aria-live": "polite";
-    "aria-atomic": true;
-  };
-  /** Props for the text input, including ARIA wiring and keyboard navigation. */
-  getInputProps: () => {
-    role: "combobox";
-    "aria-controls": string;
-    "aria-expanded": boolean;
-    "aria-activedescendant": string | undefined;
-    value: string;
-    onChange: (e: { target: { value: string } }) => void;
-    onKeyDown: (event: KeyboardEvent) => void;
-    onFocus: () => void;
-  };
-  /** Props for the listbox element. */
-  getListProps: () => { id: string; role: "listbox" };
-  /** Props for a single option element. */
-  getItemProps: (
-    item: T,
-    index: number,
-  ) => {
-    id: string;
-    role: "option";
-    "aria-selected": boolean;
-    "aria-setsize": number;
-    "aria-posinset": number;
-    "data-active": "" | undefined;
-    "data-selected": "" | undefined;
-    onClick: () => void;
-    onPointerMove: () => void;
-  };
+  /** External loading flag, forwarded so primitives can render loading states. */
+  loading: boolean;
+  /** Whether multi-select is enabled; drives `aria-checked` on options. */
+  multiple: boolean;
+  /** Internal virtualizer. Exposed for the primitives, not part of the API contract. */
+  virtualizer: Virtualizer<HTMLElement, Element>;
+  /** Ref for the virtualized scroll container. */
+  scrollRef: RefObject<HTMLElement | null>;
 };
