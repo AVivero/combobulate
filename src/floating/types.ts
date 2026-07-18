@@ -1,5 +1,5 @@
 import type { Placement } from "@floating-ui/react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, RefCallback } from "react";
 
 /** Options for {@link useAutocompleteFloating}. */
 export type UseFloatingOptions = {
@@ -19,7 +19,11 @@ export type UseFloatingOptions = {
 
 /** Wiring returned by {@link useAutocompleteFloating}. */
 export type AutocompleteFloating = {
-  reference: (el: Element | null) => void;
+  /**
+   * Ref callback for the anchor — spread straight onto `Combobulate.Input`'s
+   * `ref` (typed as an `HTMLElement` ref so no cast is needed at the call site).
+   */
+  reference: RefCallback<HTMLElement>;
   floating: (el: HTMLElement | null) => void;
   floatingStyles: CSSProperties;
   referenceProps: Record<string, unknown>;

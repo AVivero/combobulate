@@ -1,9 +1,12 @@
 /*
  * Combobulate ships no styles of its own. This is the minimal, self-contained
- * CSS the Storybook demos share so the dropdown is legible: a bordered card
- * around the combobox, and a highlight on the active row (cmdk marks it with
- * `[cmdk-item][data-selected="true"]`, the row `aria-activedescendant` points
- * at). Not a design system.
+ * CSS the Storybook demos share so the combobox is legible. Not a design system.
+ *
+ * The demos default to the FLOATING dropdown (as real-world comboboxes do): the
+ * input sits in the page flow and the option list renders in a `.cbl-panel`
+ * card — floating (anchored to the input) by default, or in-flow in the one
+ * "Relative" story. The active row is the one `aria-activedescendant` points at;
+ * cmdk marks it `[cmdk-item][data-selected="true"]`.
  */
 
 [cmdk-root] {
@@ -11,10 +14,6 @@
   box-sizing: border-box;
   font-family: system-ui, -apple-system, sans-serif;
   color: #18181b;
-  background: #ffffff;
-  border: 1px solid #d4d4d8;
-  border-radius: 10px;
-  padding: 10px;
 }
 
 [cmdk-input] {
@@ -31,8 +30,18 @@
   border-color: #6366f1;
 }
 
-[cmdk-list] {
-  margin-top: 8px;
+/*
+ * The dropdown card. Wraps the option list in both the floating popover
+ * (positioned by the library's Popover, gap via its offset middleware) and the
+ * relative story (in-flow; that story adds its own top margin).
+ */
+.cbl-panel {
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 6px;
 }
 
 [cmdk-item] {

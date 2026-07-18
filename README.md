@@ -37,25 +37,34 @@ come along as regular dependencies — one install, no extra peer setup.
 
 ## Use
 
+Like most comboboxes, the list is a **floating dropdown** anchored to the input
+— `useAutocompleteFloating` + `Combobulate.Popover` position it, flip it when
+there's no room below, match its width to the input, cap its height to the
+viewport, and dismiss it on outside-click or Escape (and on select, with
+`closeOnSelect`).
+
 ```tsx
-import { Combobulate, useCombobulate } from "combobulate";
+import { Combobulate, useAutocompleteFloating, useCombobulate } from "combobulate";
 
 const CITIES = ["Paris", "Madrid", "Berlin" /* …thousands more */];
 
 function CityPicker() {
   const api = useCombobulate({ items: CITIES, getItemId: (c) => c });
+  const floating = useAutocompleteFloating(api, { closeOnSelect: true });
 
   return (
     <Combobulate.Root api={api} label="Cities">
-      <Combobulate.Input aria-label="City" placeholder="Search cities…" />
-      <Combobulate.List<string>>
-        {(item, index) => (
-          <Combobulate.Item item={item} index={index}>
-            {item}
-          </Combobulate.Item>
-        )}
-      </Combobulate.List>
-      <Combobulate.Empty>No results</Combobulate.Empty>
+      <Combobulate.Input ref={floating.reference} {...floating.referenceProps} aria-label="City" />
+      <Combobulate.Popover floating={floating}>
+        <Combobulate.List<string>>
+          {(item, index) => (
+            <Combobulate.Item item={item} index={index}>
+              {item}
+            </Combobulate.Item>
+          )}
+        </Combobulate.List>
+        <Combobulate.Empty>No results</Combobulate.Empty>
+      </Combobulate.Popover>
       <Combobulate.LiveRegion />
     </Combobulate.Root>
   );
@@ -68,6 +77,27 @@ class up however your design system works.
 Note the explicit `<string>` on `Combobulate.List` — its item type only shows
 up in the render-prop's parameter, so TypeScript can't infer it from the call
 site; annotate it with your item type (`Combobulate.List<Airport>`, etc.).
+
+### In-flow (relative) list
+
+Prefer a list that lives in the page flow instead of floating over it (a
+full-page search, a sidebar filter)? Skip the floating layer entirely — render
+`Combobulate.List` directly, no `useAutocompleteFloating` / `Combobulate.Popover`:
+
+```tsx
+<Combobulate.Root api={api} label="Cities">
+  <Combobulate.Input aria-label="City" />
+  <Combobulate.List<string>>
+    {(item, index) => (
+      <Combobulate.Item item={item} index={index}>
+        {item}
+      </Combobulate.Item>
+    )}
+  </Combobulate.List>
+  <Combobulate.Empty>No results</Combobulate.Empty>
+  <Combobulate.LiveRegion />
+</Combobulate.Root>
+```
 
 ## Filtering
 
@@ -90,50 +120,12 @@ announces it. `onInputChange` fires on every keystroke so you can trigger the
 request; since the server already ranks results, pass `filterItems: (list) => list`
 to skip re-filtering client-side.
 
-## Floating dropdown
-
-Opt in with `useAutocompleteFloating` + `Combobulate.Popover`: anchors to the
-input, flips when there's no room below, matches the input width, caps its
-height to the viewport, and dismisses on outside-click or Escape (and on
-select, if `closeOnSelect` is set).
-
-```tsx
-import type { Ref } from "react";
-import { Combobulate, useAutocompleteFloating, useCombobulate } from "combobulate";
-
-function CityPicker() {
-  const api = useCombobulate({ items: CITIES, getItemId: (c) => c });
-  const floating = useAutocompleteFloating(api, { closeOnSelect: true });
-
-  return (
-    <Combobulate.Root api={api} label="Cities">
-      <Combobulate.Input
-        ref={floating.reference as unknown as Ref<HTMLInputElement>}
-        {...floating.referenceProps}
-        aria-label="City"
-      />
-      <Combobulate.Popover floating={floating}>
-        <Combobulate.List<string>>
-          {(item, index) => (
-            <Combobulate.Item item={item} index={index}>
-              {item}
-            </Combobulate.Item>
-          )}
-        </Combobulate.List>
-      </Combobulate.Popover>
-    </Combobulate.Root>
-  );
-}
-```
-
-`floating.reference` is untyped as a generic `Element` callback ref, hence the
-cast when attaching it to an `<input>`.
-
 ## Examples
 
-Storybook is the demo surface and the integration docs — basic usage, async
-typeahead (Fuse-ranked remote search), multi-select chips, ~3,300 real
-airports in one virtualized list, and the floating dropdown:
+Storybook is the demo surface and the integration docs. Every demo floats by
+default (as above); one "Relative" story shows the in-flow alternative. Covers
+basic usage, async typeahead (Fuse-ranked remote search), multi-select chips,
+and ~3,300 real airports in one virtualized list:
 
 ```sh
 bun run storybook
