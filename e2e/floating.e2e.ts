@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-const STORY = "/iframe.html?id=combobulate-floating--default&viewMode=story";
+// The demos float by default, so any of them exercises the floating layer.
+// Basic is the minimal case.
+const STORY = "/iframe.html?id=combobulate-basic--default&viewMode=story";
 
 test("opens on focus and dismisses on outside click", async ({ page }) => {
   await page.goto(STORY);

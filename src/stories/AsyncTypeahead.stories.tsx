@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import Fuse from "fuse.js";
 import { useEffect, useState } from "react";
 import { Combobulate, useCombobulate } from "../index";
+import { FloatingCombobox } from "./FloatingCombobox";
 import { airportLabel } from "./data/airport-label";
 import airports from "./data/airports.json";
 import type { Airport } from "./data/types";
@@ -54,18 +55,18 @@ function AsyncTypeahead() {
   });
   return (
     <div style={{ width: 380 }}>
-      <Combobulate.Root api={api} label="Remote airport search">
-        <Combobulate.Input aria-label="Airport" placeholder="Type 2+ characters…" />
-        <Combobulate.List<Airport>>
-          {(item, index) => (
-            <Combobulate.Item item={item} index={index}>
-              {airportLabel(item)}
-            </Combobulate.Item>
-          )}
-        </Combobulate.List>
-        <Combobulate.Empty>{loading ? "Searching…" : "No airports match"}</Combobulate.Empty>
-        <Combobulate.LiveRegion />
-      </Combobulate.Root>
+      <FloatingCombobox
+        api={api}
+        label="Airport"
+        placeholder="Type 2+ characters…"
+        emptyMessage={loading ? "Searching…" : "No airports match"}
+      >
+        {(item, index) => (
+          <Combobulate.Item item={item} index={index}>
+            {airportLabel(item)}
+          </Combobulate.Item>
+        )}
+      </FloatingCombobox>
     </div>
   );
 }

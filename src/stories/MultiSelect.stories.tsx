@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Combobulate, useCombobulate } from "../index";
+import { FloatingCombobox } from "./FloatingCombobox";
 import "./demo.css";
 
 const CITIES = ["Paris", "Madrid", "Berlin", "Málaga", "Lisbon", "Rome", "Vienna", "Prague"];
@@ -8,6 +9,8 @@ function MultiSelect() {
   const api = useCombobulate({ items: CITIES, multiple: true, getItemId: (c) => c });
   return (
     <div style={{ width: 380 }}>
+      {/* Chips stay in the page flow, as part of the control; only the option
+          list floats. Multi-select keeps the list open after each pick. */}
       <div
         data-testid="chips"
         style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}
@@ -18,19 +21,19 @@ function MultiSelect() {
           </button>
         ))}
       </div>
-      <Combobulate.Root api={api} label="Cities">
-        <Combobulate.Input aria-label="Cities" placeholder="Pick several…" />
-        <Combobulate.List<string>>
-          {(item, index) => (
-            <Combobulate.Item item={item} index={index}>
-              {api.isSelected(item) ? "✓ " : ""}
-              {item}
-            </Combobulate.Item>
-          )}
-        </Combobulate.List>
-        <Combobulate.Empty>No results</Combobulate.Empty>
-        <Combobulate.LiveRegion />
-      </Combobulate.Root>
+      <FloatingCombobox
+        api={api}
+        label="Cities"
+        placeholder="Pick several…"
+        emptyMessage="No results"
+      >
+        {(item, index) => (
+          <Combobulate.Item item={item} index={index}>
+            {api.isSelected(item) ? "✓ " : ""}
+            {item}
+          </Combobulate.Item>
+        )}
+      </FloatingCombobox>
     </div>
   );
 }
