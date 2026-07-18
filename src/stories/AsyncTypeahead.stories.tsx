@@ -60,6 +60,7 @@ function AsyncTypeahead() {
         label="Airport"
         placeholder="Type 2+ characters…"
         emptyMessage={loading ? "Searching…" : "No airports match"}
+        getLabel={airportLabel}
       >
         {(item, index) => (
           <Combobulate.Item item={item} index={index}>

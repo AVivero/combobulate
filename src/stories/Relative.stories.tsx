@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Combobulate, useCombobulate } from "../index";
+import { useSelectionInInput } from "./useSelectionInInput";
 import "./demo.css";
 
 const CITIES = ["Paris", "Madrid", "Berlin", "Málaga", "Lisbon", "Rome", "Vienna", "Prague"];
@@ -14,6 +15,7 @@ const CITIES = ["Paris", "Madrid", "Berlin", "Málaga", "Lisbon", "Rome", "Vienn
  */
 function Relative() {
   const api = useCombobulate({ items: CITIES, defaultOpen: true, getItemId: (c) => c });
+  useSelectionInInput(api);
   return (
     <div style={{ width: 320 }}>
       <Combobulate.Root api={api} label="City">
