@@ -1,12 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Combobulate, useCombobulate } from "../index";
+import { Combobulate } from "../index";
 import { FloatingCombobox } from "./FloatingCombobox";
+import { useDemoCombobox } from "./useDemoCombobox";
 import "./demo.css";
 
 const CITIES = ["Paris", "Madrid", "Berlin", "Málaga", "Lisbon", "Rome", "Vienna", "Prague"];
 
 function MultiSelect() {
-  const api = useCombobulate({ items: CITIES, multiple: true, getItemId: (c) => c });
+  const { api, inputProps } = useDemoCombobox({
+    items: CITIES,
+    multiple: true,
+    getItemId: (c) => c,
+  });
   return (
     <div style={{ width: 380 }}>
       {/* Chips stay in the page flow, as part of the control; only the option
@@ -23,13 +28,13 @@ function MultiSelect() {
       </div>
       <FloatingCombobox
         api={api}
+        inputProps={inputProps}
         label="Cities"
         placeholder="Pick several…"
         emptyMessage="No results"
       >
         {(item, index) => (
           <Combobulate.Item item={item} index={index}>
-            {api.isSelected(item) ? "✓ " : ""}
             {item}
           </Combobulate.Item>
         )}

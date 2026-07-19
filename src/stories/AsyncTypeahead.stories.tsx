@@ -1,23 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import Fuse from "fuse.js";
 import { useEffect, useState } from "react";
-import { Combobulate, useCombobulate } from "../index";
+import { Combobulate, normalizeText } from "../index";
 import { FloatingCombobox } from "./FloatingCombobox";
-import { airportLabel } from "./data/airport-label";
+import { airportLabel, airportSearchText } from "./data/airport-label";
 import airports from "./data/airports.json";
 import type { Airport } from "./data/types";
+import { useDemoCombobox } from "./useDemoCombobox";
 import "./demo.css";
 
 const ALL = airports as Airport[];
-// "country" is included so the ~50 real-world airports with a blank `city`
-// (e.g. AXR, BQL, BRK) are still reachable by search.
-const fuse = new Fuse(ALL, {
-  keys: ["city", "name", "iata", "country"],
-  threshold: 0.3,
-  ignoreLocation: true,
-});
 
-/** Simulates a remote search: debounce-free, 400ms latency, Fuse-ranked. */
+/**
+ * Simulates a remote search: debounce-free, 400ms latency, plain "includes"
+ * matching on the server side (this story is about the async/loading pattern,
+ * not fuzzy matching — see the Fuzzy Search story for that).
+ */
 function useRemoteSearch(query: string) {
   const [items, setItems] = useState<Airport[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,13 +25,9 @@ function useRemoteSearch(query: string) {
       return;
     }
     setLoading(true);
+    const q = normalizeText(query);
     const timer = setTimeout(() => {
-      setItems(
-        fuse
-          .search(query)
-          .slice(0, 50)
-          .map((r) => r.item),
-      );
+      setItems(ALL.filter((a) => normalizeText(airportSearchText(a)).includes(q)).slice(0, 50));
       setLoading(false);
     }, 400);
     return () => clearTimeout(timer);
@@ -45,22 +38,23 @@ function useRemoteSearch(query: string) {
 function AsyncTypeahead() {
   const [query, setQuery] = useState("");
   const { items, loading } = useRemoteSearch(query);
-  const api = useCombobulate({
+  const { api, inputProps } = useDemoCombobox({
     items,
     loading,
     getItemId: (a) => a.iata,
+    getLabel: airportLabel,
     onInputChange: setQuery,
-    // Results are already ranked by the "server" — don't filter again.
+    // Results are already matched by the "server" — don't filter again.
     filterItems: (list) => list,
   });
   return (
     <div style={{ width: 380 }}>
       <FloatingCombobox
         api={api}
+        inputProps={inputProps}
         label="Airport"
         placeholder="Type 2+ characters…"
         emptyMessage={loading ? "Searching…" : "No airports match"}
-        getLabel={airportLabel}
       >
         {(item, index) => (
           <Combobulate.Item item={item} index={index}>

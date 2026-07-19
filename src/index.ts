@@ -1,5 +1,6 @@
 export { useCombobulate } from "./core/use-combobulate";
 export type { CombobulateApi, UseCombobulateOptions } from "./core/types";
+export { defaultFilterItems, defaultGetSearchText, normalizeText } from "./core/item-utils";
 import { Combobulate as CombobulateBase } from "./core/primitives";
 import { Popover } from "./floating/floating-primitives";
 /** Headless Combobulate primitives (core + floating layer). */

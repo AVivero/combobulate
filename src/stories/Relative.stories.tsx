@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Combobulate, useCombobulate } from "../index";
-import { useSelectionInInput } from "./useSelectionInInput";
+import { Combobulate } from "../index";
+import { useDemoCombobox } from "./useDemoCombobox";
 import "./demo.css";
 
 const CITIES = ["Paris", "Madrid", "Berlin", "Málaga", "Lisbon", "Rome", "Vienna", "Prague"];
@@ -10,16 +10,18 @@ const CITIES = ["Paris", "Madrid", "Berlin", "Málaga", "Lisbon", "Rome", "Vienn
  * shows the alternative: an **in-flow (relative)** list that lives in the page
  * flow and pushes content below it down, instead of floating over. You get it
  * by simply NOT using the floating layer — render `Combobulate.List` directly,
- * no `useAutocompleteFloating` / `Combobulate.Popover`. Useful when the
- * combobox owns its own region (e.g. a full-page search, a sidebar filter).
+ * no `useAutocompleteFloating` / `Combobulate.Popover`.
  */
 function Relative() {
-  const api = useCombobulate({ items: CITIES, defaultOpen: true, getItemId: (c) => c });
-  useSelectionInInput(api);
+  const { api, inputProps } = useDemoCombobox({
+    items: CITIES,
+    defaultOpen: true,
+    getItemId: (c) => c,
+  });
   return (
     <div style={{ width: 320 }}>
       <Combobulate.Root api={api} label="City">
-        <Combobulate.Input aria-label="City" placeholder="Search cities…" />
+        <Combobulate.Input {...inputProps} aria-label="City" placeholder="Search cities…" />
         <div className="cbl-panel" style={{ marginTop: 6 }}>
           <Combobulate.List<string>>
             {(item, index) => (

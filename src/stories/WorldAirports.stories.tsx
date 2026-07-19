@@ -1,28 +1,31 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Combobulate, useCombobulate } from "../index";
+import { Combobulate } from "../index";
 import { FloatingCombobox } from "./FloatingCombobox";
 import { airportLabel, airportSearchText } from "./data/airport-label";
 import airports from "./data/airports.json";
 import type { Airport } from "./data/types";
+import { useDemoCombobox } from "./useDemoCombobox";
 import "./demo.css";
 
 const AIRPORTS = airports as Airport[];
 
 function WorldAirports() {
-  const api = useCombobulate({
+  // Default "includes" filter over the airport search text (city/name/iata/country).
+  const { api, inputProps } = useDemoCombobox({
     items: AIRPORTS,
     getItemId: (a) => a.iata,
     getSearchText: airportSearchText,
+    getLabel: airportLabel,
     estimateSize: () => 44,
   });
   return (
     <div style={{ width: 380 }}>
       <FloatingCombobox
         api={api}
+        inputProps={inputProps}
         label="Airport"
         placeholder="Search ~3,300 airports…"
         emptyMessage="No airports match"
-        getLabel={airportLabel}
       >
         {(item, index) => (
           <Combobulate.Item item={item} index={index}>

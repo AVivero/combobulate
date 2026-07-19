@@ -45,6 +45,10 @@
 }
 
 [cmdk-item] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 14px;
@@ -52,11 +56,21 @@
   cursor: pointer;
 }
 
+/* Active row — the one `aria-activedescendant` points at (keyboard/pointer). */
 [cmdk-item][data-selected="true"] {
   background: #eef2ff;
   color: #3730a3;
 }
 
-[cmdk-item][aria-checked="true"] {
+/* Chosen option — actually picked. Combobulate marks it `data-chosen` in both
+   single- and multi-select; a trailing check makes the selection visible in the
+   list (multi-select, or a reopened single-select). */
+[cmdk-item][data-chosen] {
   font-weight: 600;
+}
+
+[cmdk-item][data-chosen]::after {
+  content: "✓";
+  color: #6366f1;
+  font-weight: 700;
 }
