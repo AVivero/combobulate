@@ -124,8 +124,9 @@ to skip re-filtering client-side.
 
 Storybook is the demo surface and the integration docs. Every demo floats by
 default (as above); one "Relative" story shows the in-flow alternative. Covers
-basic usage, async typeahead (Fuse-ranked remote search), multi-select chips,
-and ~3,300 real airports in one virtualized list:
+basic usage, async typeahead, multi-select chips, ~3,300 real airports in one
+virtualized list, and a Fuzzy Search story that swaps the default "includes"
+filter for typo-tolerant Fuse.js matching:
 
 ```sh
 bun run storybook

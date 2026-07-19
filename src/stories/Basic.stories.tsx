@@ -1,16 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Combobulate, useCombobulate } from "../index";
+import { Combobulate } from "../index";
 import { FloatingCombobox } from "./FloatingCombobox";
+import { useDemoCombobox } from "./useDemoCombobox";
 import "./demo.css";
 
 const CITIES = ["Paris", "Madrid", "Berlin", "Málaga", "Lisbon", "Rome", "Vienna", "Prague"];
 
 function Basic() {
-  const api = useCombobulate({ items: CITIES, getItemId: (c) => c });
+  // Default filtering: the library's normalized "includes" match.
+  const { api, inputProps } = useDemoCombobox({ items: CITIES, getItemId: (c) => c });
   return (
     <div style={{ width: 320 }}>
       <FloatingCombobox
         api={api}
+        inputProps={inputProps}
         label="City"
         placeholder="Search cities…"
         emptyMessage="No results"
