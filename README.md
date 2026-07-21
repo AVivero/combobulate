@@ -101,8 +101,10 @@ full-page search, a sidebar filter)? Skip the floating layer entirely — render
 
 ## Filtering
 
-The default is a diacritic-insensitive substring match. Bring your own matcher
-(Fuse.js, match-sorter, a remote API) with `filterItems`:
+The default is a diacritic-insensitive substring ("includes") match. Bring your
+own matcher with `filterItems`.
+
+**Custom / fuzzy (e.g. Fuse.js):**
 
 ```tsx
 const fuse = new Fuse(AIRPORTS, { keys: ["city", "iata"], threshold: 0.3 });
@@ -114,30 +116,58 @@ useCombobulate({
 });
 ```
 
-For remote/async search, own the `items` array yourself (e.g. in `useState`),
-pass it in, and set `loading` while a request is in flight — the live region
-announces it. `onInputChange` fires on every keystroke so you can trigger the
-request; since the server already ranks results, pass `filterItems: (list) => list`
-to skip re-filtering client-side.
+**Remote / async search** — own the `items` array yourself, feed it from your
+request, and set `loading` while the request is in flight (the live region
+announces it). `onInputChange` fires on every keystroke to trigger the request
+(debounce it in production); since the server already ranks results, skip
+client-side filtering with `filterItems: (list) => list`:
+
+```tsx
+function RemoteCombobox() {
+  const [items, setItems] = useState<Airport[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const api = useCombobulate({
+    items,
+    loading,
+    getItemId: (a) => a.iata,
+    onInputChange: (query) => {
+      setLoading(true);
+      fetchAirports(query).then((results) => {
+        setItems(results);
+        setLoading(false);
+      });
+    },
+    filterItems: (list) => list, // the server already filtered/ranked
+  });
+
+  // …render with Combobulate.* as usual
+}
+```
 
 ## Examples
 
-Storybook is the demo surface and the integration docs. Every demo floats by
-default (as above); one "Relative" story shows the in-flow alternative. Covers
-basic usage, async typeahead, multi-select chips, ~3,300 real airports in one
-virtualized list, and a Fuzzy Search story that swaps the default "includes"
-filter for typo-tolerant Fuse.js matching:
+Storybook is the demo surface. The examples cover the core capabilities — all
+floating by default:
+
+- **Basic** — a single-select combobox.
+- **Multi Select** — removable chips.
+- **World Airports** — ~3,300 real airports in one virtualized list (the
+  virtualization + full-list-ARIA story that's the reason this exists).
 
 ```sh
 bun run storybook
 ```
 
+Patterns beyond the examples — custom/fuzzy filtering, remote/async search, and
+the in-flow (non-floating) layout — are covered by the **Filtering** and
+**In-flow (relative) list** sections above.
+
 ## Roadmap
 
 A nested-tree layer (expand/collapse, virtualized `role="tree"`,
-select-all-under-node) is **parked**, not shipped. Its source lives in
-`src/tree/`, retained but excluded from this build — it needs a fresh design
-pass on top of the cmdk-backed core before it ships.
+select-all-under-node) is **not shipped** — it needs a fresh design pass on top
+of the cmdk-backed core.
 
 ## License
 
