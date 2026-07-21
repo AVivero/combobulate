@@ -124,3 +124,65 @@ test("announcement is silent when closed, even while loading", () => {
   );
   expect(result.current.announcement).toBe("");
 });
+
+test("itemToInputValue: selecting fills the input with the item's label", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+  );
+  act(() => result.current.select("Madrid"));
+  expect(result.current.inputValue).toBe("Madrid");
+});
+
+test("itemToInputValue: fill does NOT fire onInputChange (typing does)", () => {
+  const seen: string[] = [];
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      itemToInputValue: (c) => c,
+      onInputChange: (v) => seen.push(v),
+    }),
+  );
+  act(() => result.current.select("Madrid")); // programmatic fill — no onInputChange
+  expect(seen).toEqual([]);
+  act(() => result.current.setInputValue("ber")); // user typing — fires
+  expect(seen).toEqual(["ber"]);
+});
+
+test("itemToInputValue: while showing a selection, the full list is shown", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+  );
+  act(() => result.current.select("Madrid")); // inputValue -> "Madrid" (a committed label)
+  // "Madrid" would substring-filter to just Madrid, but showing-a-selection bypasses:
+  expect(result.current.filteredItems).toEqual(ITEMS);
+});
+
+test("itemToInputValue: typing after a pick filters normally (dirty)", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+  );
+  act(() => result.current.select("Madrid"));
+  act(() => result.current.setInputValue("ber")); // now a search, not the committed label
+  expect(result.current.filteredItems).toEqual(["Berlin"]);
+});
+
+test("itemToInputValue is ignored in multi-select", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      multiple: true,
+      itemToInputValue: (c) => c,
+    }),
+  );
+  act(() => result.current.select("Madrid"));
+  expect(result.current.inputValue).toBe(""); // no fill; input stays a search box
+  expect(result.current.filteredItems).toEqual(ITEMS);
+});
+
+test("without itemToInputValue, selecting does not touch the input (regression guard)", () => {
+  const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
+  act(() => result.current.select("Madrid"));
+  expect(result.current.inputValue).toBe("");
+});

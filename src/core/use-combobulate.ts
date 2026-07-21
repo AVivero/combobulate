@@ -42,6 +42,7 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     loading = false,
     estimateSize = () => 32,
     overscan = 8,
+    itemToInputValue,
   } = options;
 
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -51,10 +52,23 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     defaultValue == null ? [] : Array.isArray(defaultValue) ? defaultValue : [defaultValue],
   );
 
+  // Committed-value model (single-select, opt-in via `itemToInputValue`).
+  // `committedValue` is what the input shows for the current selection;
+  // `isShowingSelection` means the input is displaying that selection rather
+  // than an active search query.
+  const committedValue =
+    itemToInputValue && !multiple && selectedItems[0] !== undefined
+      ? itemToInputValue(selectedItems[0])
+      : "";
+  const isShowingSelection = committedValue !== "" && inputValue === committedValue;
+
   const filteredItems = useMemo(() => {
+    // While the input still shows the committed selection it's a display value,
+    // not a search — show the whole list instead of filtering to it.
+    if (isShowingSelection) return items;
     if (filterItems) return filterItems(items, inputValue);
     return defaultFilterItems(items, inputValue, getSearchText);
-  }, [items, inputValue, filterItems, getSearchText]);
+  }, [items, inputValue, filterItems, getSearchText, isShowingSelection]);
 
   const getItemIdCb = useCallback(
     (item: T, index: number) => (getItemId ? getItemId(item) : String(index)),
@@ -133,9 +147,14 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
           : [...selectedItems, item]
         : [item];
       setSelectedItemsState(next);
+      // Fill-on-select (committed-value model): show the pick in the input, via
+      // the RAW setter so `onInputChange` does NOT fire — this is a programmatic
+      // change, not user typing, and a remote-search consumer must not re-fetch
+      // for the label.
+      if (itemToInputValue && !multiple) setInputValueState(itemToInputValue(item));
       onChange?.(toChangeValue(next, multiple));
     },
-    [multiple, onChange, getItemId, selectedItems],
+    [multiple, onChange, getItemId, selectedItems, itemToInputValue],
   );
 
   const setSelectedItems = useCallback(
