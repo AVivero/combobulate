@@ -187,19 +187,23 @@ test("without itemToInputValue, selecting does not touch the input (regression g
   expect(result.current.inputValue).toBe("");
 });
 
-test("revert-on-close: a dirty search reverts to the committed selection", () => {
+test("revert-on-close: a dirty search reverts to the committed selection without firing onInputChange", () => {
+  const seen: string[] = [];
   const { result } = renderHook(() =>
     useCombobulate({
       items: ITEMS,
       getItemId: (c) => c,
       itemToInputValue: (c) => c,
       defaultOpen: true,
+      onInputChange: (v) => seen.push(v),
     }),
   );
-  act(() => result.current.select("Madrid")); // inputValue -> "Madrid"
-  act(() => result.current.setInputValue("ber")); // typed a search, didn't pick
-  act(() => result.current.setOpen(false));
+  act(() => result.current.select("Madrid")); // programmatic fill — no onInputChange
+  act(() => result.current.setInputValue("ber")); // user typing — fires onInputChange
+  act(() => result.current.setOpen(false)); // dirty -> reverts to "Madrid" via RAW setter
   expect(result.current.inputValue).toBe("Madrid"); // reverted
+  // The revert must NOT fire onInputChange: only the user's "ber" keystroke did.
+  expect(seen).toEqual(["ber"]);
 });
 
 test("revert-on-close: with nothing selected, an abandoned search clears", () => {
@@ -230,7 +234,7 @@ test("revert-on-close: a clean input (just filled) is left untouched", () => {
   act(() => result.current.select("Madrid")); // inputValue -> "Madrid" (clean, == committed)
   act(() => result.current.setOpen(false)); // not dirty -> no revert
   expect(result.current.inputValue).toBe("Madrid");
-  expect(seen).toEqual([]); // revert path never fired onInputChange either
+  expect(seen).toEqual([]); // clean input: the revert branch does not run, input unchanged
 });
 
 test("revert-on-close does nothing without itemToInputValue (regression guard)", () => {
