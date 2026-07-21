@@ -162,13 +162,11 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
   // `onChange` fires OUTSIDE the state updater. React invokes updater
   // functions twice in StrictMode, so a side effect inside one would fire the
   // consumer's callback twice in dev (StrictMode is on by default in Next.js
-  // and every Vite React template). Mirrors `setSelectedItems` below.
+  // and every Vite React template).
   //
   // Reads render-scoped `selectedItems` rather than the updater's `prev`, so
   // it is intended to be called ONCE PER USER EVENT — two `select()` calls
-  // batched in the same tick would drop the first. A caller that needs to
-  // batch several changes at once should use `setSelectedItems` instead,
-  // which takes the whole array.
+  // batched in the same tick would drop the first.
   const select = useCallback(
     (item: T) => {
       const next = multiple
@@ -185,15 +183,6 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
       onChange?.(toChangeValue(next, multiple));
     },
     [multiple, onChange, getItemId, selectedItems, itemToInputValue],
-  );
-
-  const setSelectedItems = useCallback(
-    (next: T[]) => {
-      const clamped = multiple ? [...next] : next.slice(0, 1);
-      setSelectedItemsState(clamped);
-      onChange?.(toChangeValue(clamped, multiple));
-    },
-    [multiple, onChange],
   );
 
   const isSelected = useCallback(
@@ -339,8 +328,6 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
 
   return {
     isOpen,
-    open: () => setOpen(true),
-    close: () => setOpen(false),
     setOpen,
     inputValue,
     setInputValue,
@@ -351,9 +338,7 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     activeIndex,
     selectedItems,
     select,
-    setSelectedItems,
     isSelected,
-    getItemId: getItemIdCb,
     itemValue,
     announcement,
     loading,
