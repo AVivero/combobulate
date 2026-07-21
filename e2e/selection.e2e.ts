@@ -36,3 +36,20 @@ test("reopening after a pick shows the list, not an empty 'no match'", async ({ 
   // the picked option is visibly marked as chosen
   await expect(page.locator("[cmdk-item][data-chosen]")).toHaveCount(1);
 });
+
+// Clearing the whole input (backspacing it empty) unselects: the input stays
+// empty on close instead of reverting to the committed label, and no option is
+// marked chosen anymore.
+test("clearing the input to empty unselects (does not revert on close)", async ({ page }) => {
+  await page.goto("/iframe.html?id=combobulate-basic--default&viewMode=story");
+  const input = page.getByRole("combobox");
+  await input.click();
+  await page.getByRole("option", { name: "Paris" }).click();
+  await expect(input).toHaveValue("Paris"); // picked
+  await input.click(); // reopen (shows the full list, Paris chosen)
+  await expect(page.locator("[cmdk-item][data-chosen]")).toHaveCount(1);
+  await input.fill(""); // backspace the whole thing
+  await expect(page.locator("[cmdk-item][data-chosen]")).toHaveCount(0); // unselected
+  await input.press("Escape"); // close
+  await expect(input).toHaveValue(""); // stays empty — NOT reverted to "Paris"
+});

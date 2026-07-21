@@ -261,3 +261,42 @@ test("opening a plain search does not force-highlight (regression guard)", () =>
   act(() => result.current.setOpen(true));
   expect(result.current.activeIndex).toBe(-1);
 });
+
+test("committed-value: clearing the input to empty clears the selection", () => {
+  const seen: unknown[] = [];
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      itemToInputValue: (c) => c,
+      onChange: (v) => seen.push(v),
+    }),
+  );
+  act(() => result.current.select("Madrid")); // inputValue -> "Madrid", selected ["Madrid"]
+  expect(result.current.selectedItems).toEqual(["Madrid"]);
+  act(() => result.current.setInputValue("")); // user backspaces the whole input
+  expect(result.current.selectedItems).toEqual([]); // selection cleared
+  expect(seen).toEqual(["Madrid", null]); // select fired "Madrid", clear fired null
+});
+
+test("committed-value: clearing does nothing without itemToInputValue (regression guard)", () => {
+  const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
+  act(() => result.current.select("Madrid"));
+  act(() => result.current.setInputValue(""));
+  expect(result.current.selectedItems).toEqual(["Madrid"]); // no committed-value model -> unchanged
+});
+
+test("committed-value: clearing does nothing in multi-select (regression guard)", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      multiple: true,
+      itemToInputValue: (c) => c,
+    }),
+  );
+  act(() => result.current.select("Paris"));
+  act(() => result.current.select("Berlin"));
+  act(() => result.current.setInputValue(""));
+  expect(result.current.selectedItems).toEqual(["Paris", "Berlin"]); // chips carry selection
+});
