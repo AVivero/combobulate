@@ -124,3 +124,140 @@ test("announcement is silent when closed, even while loading", () => {
   );
   expect(result.current.announcement).toBe("");
 });
+
+test("itemToInputValue: selecting fills the input with the item's label", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+  );
+  act(() => result.current.select("Madrid"));
+  expect(result.current.inputValue).toBe("Madrid");
+});
+
+test("itemToInputValue: fill does NOT fire onInputChange (typing does)", () => {
+  const seen: string[] = [];
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      itemToInputValue: (c) => c,
+      onInputChange: (v) => seen.push(v),
+    }),
+  );
+  act(() => result.current.select("Madrid")); // programmatic fill — no onInputChange
+  expect(seen).toEqual([]);
+  act(() => result.current.setInputValue("ber")); // user typing — fires
+  expect(seen).toEqual(["ber"]);
+});
+
+test("itemToInputValue: while showing a selection, the full list is shown", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+  );
+  act(() => result.current.select("Madrid")); // inputValue -> "Madrid" (a committed label)
+  // "Madrid" would substring-filter to just Madrid, but showing-a-selection bypasses:
+  expect(result.current.filteredItems).toEqual(ITEMS);
+});
+
+test("itemToInputValue: typing after a pick filters normally (dirty)", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+  );
+  act(() => result.current.select("Madrid"));
+  act(() => result.current.setInputValue("ber")); // now a search, not the committed label
+  expect(result.current.filteredItems).toEqual(["Berlin"]);
+});
+
+test("itemToInputValue is ignored in multi-select", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      multiple: true,
+      itemToInputValue: (c) => c,
+    }),
+  );
+  act(() => result.current.select("Madrid"));
+  expect(result.current.inputValue).toBe(""); // no fill; input stays a search box
+  expect(result.current.filteredItems).toEqual(ITEMS);
+});
+
+test("without itemToInputValue, selecting does not touch the input (regression guard)", () => {
+  const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
+  act(() => result.current.select("Madrid"));
+  expect(result.current.inputValue).toBe("");
+});
+
+test("revert-on-close: a dirty search reverts to the committed selection without firing onInputChange", () => {
+  const seen: string[] = [];
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      itemToInputValue: (c) => c,
+      defaultOpen: true,
+      onInputChange: (v) => seen.push(v),
+    }),
+  );
+  act(() => result.current.select("Madrid")); // programmatic fill — no onInputChange
+  act(() => result.current.setInputValue("ber")); // user typing — fires onInputChange
+  act(() => result.current.setOpen(false)); // dirty -> reverts to "Madrid" via RAW setter
+  expect(result.current.inputValue).toBe("Madrid"); // reverted
+  // The revert must NOT fire onInputChange: only the user's "ber" keystroke did.
+  expect(seen).toEqual(["ber"]);
+});
+
+test("revert-on-close: with nothing selected, an abandoned search clears", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      itemToInputValue: (c) => c,
+      defaultOpen: true,
+    }),
+  );
+  act(() => result.current.setInputValue("ber"));
+  act(() => result.current.setOpen(false));
+  expect(result.current.inputValue).toBe(""); // committedValue is "" -> clears
+});
+
+test("revert-on-close: a clean input (just filled) is left untouched", () => {
+  const seen: string[] = [];
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      itemToInputValue: (c) => c,
+      defaultOpen: true,
+      onInputChange: (v) => seen.push(v),
+    }),
+  );
+  act(() => result.current.select("Madrid")); // inputValue -> "Madrid" (clean, == committed)
+  act(() => result.current.setOpen(false)); // not dirty -> no revert
+  expect(result.current.inputValue).toBe("Madrid");
+  expect(seen).toEqual([]); // clean input: the revert branch does not run, input unchanged
+});
+
+test("revert-on-close does nothing without itemToInputValue (regression guard)", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, defaultOpen: true }),
+  );
+  act(() => result.current.setInputValue("ber"));
+  act(() => result.current.setOpen(false));
+  expect(result.current.inputValue).toBe("ber"); // untouched
+});
+
+test("opening while showing a selection highlights the selected item", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+  );
+  act(() => result.current.select("Berlin")); // inputValue -> "Berlin"; list closed
+  expect(result.current.activeIndex).toBe(-1); // nothing highlighted yet
+  act(() => result.current.setOpen(true)); // open while showing the selection
+  expect(result.current.activeIndex).toBe(ITEMS.indexOf("Berlin")); // 2
+});
+
+test("opening a plain search does not force-highlight (regression guard)", () => {
+  const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
+  act(() => result.current.setOpen(true));
+  expect(result.current.activeIndex).toBe(-1);
+});

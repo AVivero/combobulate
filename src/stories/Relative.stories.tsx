@@ -17,6 +17,7 @@ function Relative() {
     items: CITIES,
     defaultOpen: true,
     getItemId: (c) => c,
+    itemToInputValue: (c) => c,
   });
   return (
     <div style={{ width: 320 }}>

@@ -39,6 +39,14 @@ export type UseCombobulateOptions<T> = {
   estimateSize?: (index: number) => number;
   /** Rows to render above/below the viewport. Default 8. */
   overscan?: number;
+  /**
+   * Single-select only. When set, the combobox adopts the "committed value"
+   * model: the input displays the selected item (via this accessor), reopening
+   * a selection shows the whole list instead of filtering to it, and an
+   * abandoned search reverts to the selection on close. Omit it (the default)
+   * and the input stays a pure search box. Ignored when `multiple` is true.
+   */
+  itemToInputValue?: (item: T) => string;
 };
 
 /** Public API returned by {@link useCombobulate}. */

@@ -42,6 +42,7 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     loading = false,
     estimateSize = () => 32,
     overscan = 8,
+    itemToInputValue,
   } = options;
 
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -51,10 +52,23 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     defaultValue == null ? [] : Array.isArray(defaultValue) ? defaultValue : [defaultValue],
   );
 
+  // Committed-value model (single-select, opt-in via `itemToInputValue`).
+  // `committedValue` is what the input shows for the current selection;
+  // `isShowingSelection` means the input is displaying that selection rather
+  // than an active search query.
+  const committedValue =
+    itemToInputValue && !multiple && selectedItems[0] !== undefined
+      ? itemToInputValue(selectedItems[0])
+      : "";
+  const isShowingSelection = committedValue !== "" && inputValue === committedValue;
+
   const filteredItems = useMemo(() => {
+    // While the input still shows the committed selection it's a display value,
+    // not a search — show the whole list instead of filtering to it.
+    if (isShowingSelection) return items;
     if (filterItems) return filterItems(items, inputValue);
     return defaultFilterItems(items, inputValue, getSearchText);
-  }, [items, inputValue, filterItems, getSearchText]);
+  }, [items, inputValue, filterItems, getSearchText, isShowingSelection]);
 
   const getItemIdCb = useCallback(
     (item: T, index: number) => (getItemId ? getItemId(item) : String(index)),
@@ -99,12 +113,34 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     virtualizer.scrollToIndex(activeIndex, { align: "auto" });
   }, [isOpen, activeIndex, virtualizer]);
 
+  // Highlight the committed selection when the list opens, so it's visible and
+  // scrolled into view through the bridge above. Keyed on `isOpen` going true;
+  // no-op for a plain search (isShowingSelection false).
+  const wasOpenRef = useRef(isOpen);
+  useEffect(() => {
+    const justOpened = isOpen && !wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+    if (!justOpened || !isShowingSelection) return;
+    const selected = selectedItems[0];
+    if (selected === undefined) return;
+    const index = filteredItems.indexOf(selected);
+    if (index >= 0) setActiveValue(itemValue(selected, index));
+  }, [isOpen, isShowingSelection, selectedItems, filteredItems, itemValue]);
+
   const setOpen = useCallback(
     (next: boolean) => {
+      // Revert-on-close (committed-value model): if the user typed a search but
+      // didn't pick, restore the input to the committed selection (or "" if
+      // none) on close. Raw setter so `onInputChange` does not fire. A clean
+      // input (already equal to the committed value, e.g. right after a
+      // fill-on-select) is left untouched, so close-on-select never double-handles.
+      if (!next && itemToInputValue && !multiple && inputValue !== committedValue) {
+        setInputValueState(committedValue);
+      }
       setIsOpen(next);
       onOpenChange?.(next);
     },
-    [onOpenChange],
+    [onOpenChange, itemToInputValue, multiple, inputValue, committedValue],
   );
 
   const setInputValue = useCallback(
@@ -133,9 +169,14 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
           : [...selectedItems, item]
         : [item];
       setSelectedItemsState(next);
+      // Fill-on-select (committed-value model): show the pick in the input, via
+      // the RAW setter so `onInputChange` does NOT fire — this is a programmatic
+      // change, not user typing, and a remote-search consumer must not re-fetch
+      // for the label.
+      if (itemToInputValue && !multiple) setInputValueState(itemToInputValue(item));
       onChange?.(toChangeValue(next, multiple));
     },
-    [multiple, onChange, getItemId, selectedItems],
+    [multiple, onChange, getItemId, selectedItems, itemToInputValue],
   );
 
   const setSelectedItems = useCallback(
