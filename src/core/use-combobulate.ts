@@ -147,8 +147,16 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     (value: string) => {
       setInputValueState(value);
       onInputChange?.(value);
+      // Committed-value model: the input represents the selection, so clearing
+      // it to empty means "nothing selected" — drop the selection. Single-select
+      // only (multi-select keeps its chips). This runs only on user edits: the
+      // programmatic fill/revert use the raw `setInputValueState`, not this.
+      if (value === "" && itemToInputValue && !multiple && selectedItems.length > 0) {
+        setSelectedItemsState([]);
+        onChange?.(toChangeValue([], multiple));
+      }
     },
-    [onInputChange],
+    [onInputChange, itemToInputValue, multiple, selectedItems, onChange],
   );
 
   // `onChange` fires OUTSIDE the state updater. React invokes updater
