@@ -113,6 +113,20 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     virtualizer.scrollToIndex(activeIndex, { align: "auto" });
   }, [isOpen, activeIndex, virtualizer]);
 
+  // Highlight the committed selection when the list opens, so it's visible and
+  // scrolled into view through the bridge above. Keyed on `isOpen` going true;
+  // no-op for a plain search (isShowingSelection false).
+  const wasOpenRef = useRef(isOpen);
+  useEffect(() => {
+    const justOpened = isOpen && !wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+    if (!justOpened || !isShowingSelection) return;
+    const selected = selectedItems[0];
+    if (selected === undefined) return;
+    const index = filteredItems.indexOf(selected);
+    if (index >= 0) setActiveValue(itemValue(selected, index));
+  }, [isOpen, isShowingSelection, selectedItems, filteredItems, itemValue]);
+
   const setOpen = useCallback(
     (next: boolean) => {
       // Revert-on-close (committed-value model): if the user typed a search but

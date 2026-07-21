@@ -245,3 +245,19 @@ test("revert-on-close does nothing without itemToInputValue (regression guard)",
   act(() => result.current.setOpen(false));
   expect(result.current.inputValue).toBe("ber"); // untouched
 });
+
+test("opening while showing a selection highlights the selected item", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+  );
+  act(() => result.current.select("Berlin")); // inputValue -> "Berlin"; list closed
+  expect(result.current.activeIndex).toBe(-1); // nothing highlighted yet
+  act(() => result.current.setOpen(true)); // open while showing the selection
+  expect(result.current.activeIndex).toBe(ITEMS.indexOf("Berlin")); // 2
+});
+
+test("opening a plain search does not force-highlight (regression guard)", () => {
+  const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
+  act(() => result.current.setOpen(true));
+  expect(result.current.activeIndex).toBe(-1);
+});
