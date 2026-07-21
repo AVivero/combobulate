@@ -38,7 +38,7 @@ function FuzzySearch() {
   const { api, inputProps } = useDemoCombobox({
     items: ALL,
     getItemId: (a) => a.iata,
-    getLabel: airportLabel,
+    itemToInputValue: airportLabel,
     estimateSize: () => 44,
     filterItems: (list, query) =>
       query.trim() === "" ? list : fuse.search(query).map((r) => r.item),

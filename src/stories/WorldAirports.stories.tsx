@@ -15,7 +15,7 @@ function WorldAirports() {
     items: AIRPORTS,
     getItemId: (a) => a.iata,
     getSearchText: airportSearchText,
-    getLabel: airportLabel,
+    itemToInputValue: airportLabel,
     estimateSize: () => 44,
   });
   return (

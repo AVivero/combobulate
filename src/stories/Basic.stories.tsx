@@ -8,7 +8,11 @@ const CITIES = ["Paris", "Madrid", "Berlin", "Málaga", "Lisbon", "Rome", "Vienn
 
 function Basic() {
   // Default filtering: the library's normalized "includes" match.
-  const { api, inputProps } = useDemoCombobox({ items: CITIES, getItemId: (c) => c });
+  const { api, inputProps } = useDemoCombobox({
+    items: CITIES,
+    getItemId: (c) => c,
+    itemToInputValue: (c) => c,
+  });
   return (
     <div style={{ width: 320 }}>
       <FloatingCombobox

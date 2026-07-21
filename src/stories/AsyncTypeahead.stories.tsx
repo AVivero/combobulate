@@ -42,7 +42,7 @@ function AsyncTypeahead() {
     items,
     loading,
     getItemId: (a) => a.iata,
-    getLabel: airportLabel,
+    itemToInputValue: airportLabel,
     onInputChange: setQuery,
     // Results are already matched by the "server" — don't filter again.
     filterItems: (list) => list,
