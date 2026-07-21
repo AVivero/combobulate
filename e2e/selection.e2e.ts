@@ -53,3 +53,13 @@ test("clearing the input to empty unselects (does not revert on close)", async (
   await input.press("Escape"); // close
   await expect(input).toHaveValue(""); // stays empty — NOT reverted to "Paris"
 });
+
+// The default filter is a normalized substring ("includes") match: "ber" finds
+// only Berlin. (Diacritic-insensitivity is covered by the unit tests.)
+test("default filter is a plain substring includes match", async ({ page }) => {
+  await page.goto("/iframe.html?id=combobulate-basic--default&viewMode=story");
+  const input = page.getByRole("combobox");
+  await input.click();
+  await input.fill("ber");
+  await expect(page.getByRole("option")).toHaveText(["Berlin"]);
+});

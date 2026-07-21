@@ -52,8 +52,6 @@ export type UseCombobulateOptions<T> = {
 /** Public API returned by {@link useCombobulate}. */
 export type CombobulateApi<T> = {
   isOpen: boolean;
-  open: () => void;
-  close: () => void;
   setOpen: (next: boolean) => void;
   inputValue: string;
   setInputValue: (value: string) => void;
@@ -72,13 +70,10 @@ export type CombobulateApi<T> = {
   activeIndex: number;
   selectedItems: T[];
   select: (item: T) => void;
-  /** Replace the entire selection in one update. Fires `onChange` once. */
-  setSelectedItems: (items: T[]) => void;
   isSelected: (item: T) => boolean;
-  /** Resolve an item's logical id (caller's `getItemId`, else the index). */
-  getItemId: (item: T, index: number) => string;
   /**
-   * The item's cmdk `value` string: the logical id, used verbatim.
+   * The item's cmdk `value` string: the caller's `getItemId` (or the positional
+   * index), used verbatim.
    *
    * cmdk emits `value` back through `onValueChange` unchanged — no
    * case-folding, no trimming (pinned by `cmdk-behavior.test.tsx`), so the

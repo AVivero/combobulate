@@ -7,7 +7,7 @@ function fakeApi(overrides: Record<string, unknown> = {}) {
     isOpen: true,
     setOpen: mock(() => {}),
     selectedItems: [] as string[],
-    getItemId: (item: string) => item,
+    itemValue: (item: string) => item,
     ...overrides,
   };
 }

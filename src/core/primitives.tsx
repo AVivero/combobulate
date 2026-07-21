@@ -1,8 +1,26 @@
 import { Command } from "cmdk";
 import { type ReactNode, forwardRef } from "react";
 import { CombobulateProvider, useCombobulateContext } from "./context";
-import { mergeProps } from "./merge-props";
 import type { CombobulateApi } from "./types";
+
+/**
+ * Compose two optional event handlers into one that calls `own` first, then the
+ * consumer's — so the floating layer's Escape-to-dismiss `onKeyDown` and the
+ * demo's select-all `onFocus` augment `Input`'s own handlers instead of
+ * clobbering them. Returns the single defined handler unchanged when there's
+ * nothing to compose (no wrapper allocated).
+ */
+function compose<A extends unknown[]>(
+  own: ((...args: A) => void) | undefined,
+  consumer: ((...args: A) => void) | undefined,
+): ((...args: A) => void) | undefined {
+  if (!own) return consumer;
+  if (!consumer) return own;
+  return (...args: A) => {
+    own(...args);
+    consumer(...args);
+  };
+}
 
 /** Props for {@link Combobulate}'s `Root` component. */
 export type CombobulateRootProps<T> = {
@@ -46,16 +64,21 @@ function Root<T>({ api, label, children }: CombobulateRootProps<T>) {
 const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function Input(props, ref) {
     const api = useCombobulateContext();
-    const own = {
-      value: api.inputValue,
-      onFocus: () => api.setOpen(true),
-      onKeyDown: api.onInputKeyDown,
-    };
-    const merged = mergeProps(own, props);
     return (
       <Command.Input
-        {...merged}
+        {...props}
         ref={ref}
+        // `value` after the spread: the hook owns the input text, so a stray
+        // consumer `value` prop can't silently decouple it.
+        value={api.inputValue}
+        onFocus={compose<[React.FocusEvent<HTMLInputElement>]>(
+          () => api.setOpen(true),
+          props.onFocus,
+        )}
+        onKeyDown={compose<[React.KeyboardEvent<HTMLInputElement>]>(
+          api.onInputKeyDown,
+          props.onKeyDown,
+        )}
         onValueChange={(value: string) => {
           api.setInputValue(value);
           if (!api.isOpen) api.setOpen(true);
@@ -69,14 +92,15 @@ const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputEl
 export type CombobulateListProps<T> = {
   /** Render-prop invoked once per visible (virtualized) item. */
   children: (item: T, index: number) => ReactNode;
-  style?: React.CSSProperties;
+  /** Max height (px) of the scroll viewport. Default 300. */
+  maxHeight?: number;
 };
 
 /**
  * Virtualized scroll container. cmdk's `Command.List` supplies the listbox
  * role; the inner scroll element is ours so TanStack Virtual can measure it.
  */
-function List<T>({ children, style }: CombobulateListProps<T>) {
+function List<T>({ children, maxHeight = 300 }: CombobulateListProps<T>) {
   const api = useCombobulateContext<T>();
   if (!api.isOpen) return null;
   const rows = api.virtualizer.getVirtualItems();
@@ -84,7 +108,7 @@ function List<T>({ children, style }: CombobulateListProps<T>) {
     <Command.List>
       <div
         ref={api.scrollRef as React.Ref<HTMLDivElement>}
-        style={{ overflow: "auto", position: "relative", maxHeight: 300, ...style }}
+        style={{ overflow: "auto", position: "relative", maxHeight }}
       >
         <div style={{ height: api.virtualizer.getTotalSize(), position: "relative" }}>
           {rows.map((row) => {

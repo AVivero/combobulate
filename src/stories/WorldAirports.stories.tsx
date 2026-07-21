@@ -26,6 +26,7 @@ function WorldAirports() {
         label="Airport"
         placeholder="Search ~3,300 airports…"
         emptyMessage="No airports match"
+        maxHeight={240}
       >
         {(item, index) => (
           <Combobulate.Item item={item} index={index}>

@@ -16,6 +16,7 @@ export function FloatingCombobox<T>({
   inputProps,
   children,
   emptyMessage,
+  maxHeight,
 }: {
   api: CombobulateApi<T>;
   label: string;
@@ -23,6 +24,7 @@ export function FloatingCombobox<T>({
   inputProps?: InputHTMLAttributes<HTMLInputElement>;
   children: (item: T, index: number) => ReactNode;
   emptyMessage?: ReactNode;
+  maxHeight?: number;
 }) {
   const floating = useAutocompleteFloating(api, { closeOnSelect: !api.multiple });
   return (
@@ -36,7 +38,7 @@ export function FloatingCombobox<T>({
       />
       <Combobulate.Popover floating={floating}>
         <div className="cbl-panel">
-          <Combobulate.List<T>>{children}</Combobulate.List>
+          <Combobulate.List<T> maxHeight={maxHeight}>{children}</Combobulate.List>
           {emptyMessage === undefined ? null : (
             <Combobulate.Empty>{emptyMessage}</Combobulate.Empty>
           )}
