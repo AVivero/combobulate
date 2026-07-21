@@ -186,3 +186,58 @@ test("without itemToInputValue, selecting does not touch the input (regression g
   act(() => result.current.select("Madrid"));
   expect(result.current.inputValue).toBe("");
 });
+
+test("revert-on-close: a dirty search reverts to the committed selection", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      itemToInputValue: (c) => c,
+      defaultOpen: true,
+    }),
+  );
+  act(() => result.current.select("Madrid")); // inputValue -> "Madrid"
+  act(() => result.current.setInputValue("ber")); // typed a search, didn't pick
+  act(() => result.current.setOpen(false));
+  expect(result.current.inputValue).toBe("Madrid"); // reverted
+});
+
+test("revert-on-close: with nothing selected, an abandoned search clears", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      itemToInputValue: (c) => c,
+      defaultOpen: true,
+    }),
+  );
+  act(() => result.current.setInputValue("ber"));
+  act(() => result.current.setOpen(false));
+  expect(result.current.inputValue).toBe(""); // committedValue is "" -> clears
+});
+
+test("revert-on-close: a clean input (just filled) is left untouched", () => {
+  const seen: string[] = [];
+  const { result } = renderHook(() =>
+    useCombobulate({
+      items: ITEMS,
+      getItemId: (c) => c,
+      itemToInputValue: (c) => c,
+      defaultOpen: true,
+      onInputChange: (v) => seen.push(v),
+    }),
+  );
+  act(() => result.current.select("Madrid")); // inputValue -> "Madrid" (clean, == committed)
+  act(() => result.current.setOpen(false)); // not dirty -> no revert
+  expect(result.current.inputValue).toBe("Madrid");
+  expect(seen).toEqual([]); // revert path never fired onInputChange either
+});
+
+test("revert-on-close does nothing without itemToInputValue (regression guard)", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, defaultOpen: true }),
+  );
+  act(() => result.current.setInputValue("ber"));
+  act(() => result.current.setOpen(false));
+  expect(result.current.inputValue).toBe("ber"); // untouched
+});

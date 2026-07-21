@@ -115,10 +115,18 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
 
   const setOpen = useCallback(
     (next: boolean) => {
+      // Revert-on-close (committed-value model): if the user typed a search but
+      // didn't pick, restore the input to the committed selection (or "" if
+      // none) on close. Raw setter so `onInputChange` does not fire. A clean
+      // input (already equal to the committed value, e.g. right after a
+      // fill-on-select) is left untouched, so close-on-select never double-handles.
+      if (!next && itemToInputValue && !multiple && inputValue !== committedValue) {
+        setInputValueState(committedValue);
+      }
       setIsOpen(next);
       onOpenChange?.(next);
     },
-    [onOpenChange],
+    [onOpenChange, itemToInputValue, multiple, inputValue, committedValue],
   );
 
   const setInputValue = useCallback(
