@@ -15,7 +15,7 @@ import {
 } from "@ariakit/components/combobox/combobox-store";
 import { subscribe } from "@ariakit/store";
 import { type KeyboardEvent, useSyncExternalStore } from "react";
-import { defaultGetSearchText, isSameItem, toChangeValue } from "./item-utils";
+import { defaultFilterItems, defaultGetSearchText, isSameItem, toChangeValue } from "./item-utils";
 import type { CombobulateState, CombobulateStore, UseCombobulateOptions } from "./types";
 
 /**
@@ -36,6 +36,15 @@ export type CombobulateStoreInternal<T> = CombobulateStore<T> & {
       multiple: boolean;
       loading: boolean;
     };
+    /**
+     * Committed-value model (single-select, opt-in via `itemToInputValue`):
+     * if the input was edited away from the committed selection's display
+     * value and not re-committed by a new selection, restore it. `setOpen`
+     * calls this synchronously on `open -> false`. Exposed so a later task's
+     * effect (e.g. closing via an outside interaction that bypasses `setOpen`)
+     * can call it too. No-op when the committed-value model isn't active.
+     */
+    commitOrRevert: () => void;
   };
 };
 
@@ -128,23 +137,62 @@ export function createCombobulateStore<T>(
     return cachedSelectedItems;
   };
 
+  /**
+   * The committed-value model (single-select, opt-in via `itemToInputValue`):
+   * what the input should show for the current selection, or "" when the
+   * model isn't active or nothing is selected.
+   */
+  const committedValue = (): string => {
+    const selected = selectedItems();
+    return itemToInputValue && !multiple && selected[0] !== undefined
+      ? itemToInputValue(selected[0])
+      : "";
+  };
+
+  /**
+   * Cache `filteredItems` behind (input value, `selectedItems` reference) so
+   * repeated `getState()`/`useState` reads return an identity-stable array
+   * when neither input has changed — required for `useSyncExternalStore`
+   * (a fresh array reference on every call would loop it).
+   */
+  let cachedFilterValue: string | undefined;
+  let cachedFilterSelectedItems: T[] | undefined;
+  let cachedFilteredItems: T[] = items;
+  const filteredItems = (): T[] => {
+    const value = combobox.getState().value;
+    const selected = selectedItems();
+    if (value === cachedFilterValue && selected === cachedFilterSelectedItems) {
+      return cachedFilteredItems;
+    }
+    cachedFilterValue = value;
+    cachedFilterSelectedItems = selected;
+    const committed = committedValue();
+    // While the input still shows the committed selection it's a display
+    // value, not a search — show the whole list instead of filtering to it.
+    const isShowingSelection = committed !== "" && value === committed;
+    cachedFilteredItems = isShowingSelection
+      ? items
+      : filterItems
+        ? filterItems(items, value)
+        : defaultFilterItems(items, value, getSearchText);
+    return cachedFilteredItems;
+  };
+
   const getState = (): CombobulateState<T> => {
     const state = combobox.getState();
     const activeValue = state.activeId ?? "";
-    // Stub: Task 2 fills real filtering. Return the same reference each call so
-    // `useState("filteredItems")` stays identity-stable.
-    const filteredItems = items;
+    const filteredItemsSnapshot = filteredItems();
     const activeIndex =
       activeValue === ""
         ? -1
-        : filteredItems.findIndex((item, index) => itemValue(item, index) === activeValue);
+        : filteredItemsSnapshot.findIndex((item, index) => itemValue(item, index) === activeValue);
     return {
       isOpen: state.open,
       inputValue: state.value,
       activeValue,
       activeIndex,
       selectedItems: selectedItems(),
-      filteredItems,
+      filteredItems: filteredItemsSnapshot,
       loading,
       multiple,
     };
@@ -160,7 +208,25 @@ export function createCombobulateStore<T>(
     return useSyncExternalStore(subscribeToStore, getSnapshot, getSnapshot);
   };
 
+  /**
+   * Revert-on-close (committed-value model): if the user typed a search but
+   * didn't pick, restore the input to the committed selection (or "" if none).
+   * Raw setter (`combobox.setState` directly, not `setInputValue`), so
+   * `onInputChange` does NOT fire — this is a programmatic change, not user
+   * typing. A clean input (already equal to the committed value, e.g. right
+   * after a fill-on-select) is left untouched, so close-on-select never
+   * double-handles. No-op when the committed-value model isn't active.
+   */
+  const commitOrRevert = (): void => {
+    if (!itemToInputValue || multiple) return;
+    const committed = committedValue();
+    if (combobox.getState().value !== committed) {
+      combobox.setState("value", committed);
+    }
+  };
+
   const setOpen = (open: boolean): void => {
+    if (!open) commitOrRevert();
     combobox.setState("open", open);
     onOpenChange?.(open);
   };
@@ -168,6 +234,14 @@ export function createCombobulateStore<T>(
   const setInputValue = (value: string): void => {
     combobox.setState("value", value);
     onInputChange?.(value);
+    // Committed-value model: the input represents the selection, so clearing
+    // it to empty means "nothing selected" — drop the selection. Single-select
+    // only (multi-select keeps its chips). This runs only on user edits: the
+    // programmatic fill/revert use the raw `combobox.setState`, not this.
+    if (value === "" && itemToInputValue && !multiple && selectedItems().length > 0) {
+      combobox.setState("selectedValue", "");
+      onChange?.(toChangeValue([], multiple));
+    }
   };
 
   // `activeId` === `itemValue`, so the active value is set verbatim.
@@ -189,6 +263,11 @@ export function createCombobulateStore<T>(
     } else {
       combobox.setState("selectedValue", value);
       onChange?.(toChangeValue(itemsForValues([value]), false));
+      // Fill-on-select (committed-value model): show the pick in the input,
+      // via the raw setter so `onInputChange` does NOT fire — this is a
+      // programmatic change, not user typing, and a remote-search consumer
+      // must not re-fetch for the label.
+      if (itemToInputValue) combobox.setState("value", itemToInputValue(item));
     }
   };
 
@@ -211,6 +290,7 @@ export function createCombobulateStore<T>(
     _internal: {
       combobox,
       config: { items, getItemId, getSearchText, filterItems, itemToInputValue, multiple, loading },
+      commitOrRevert,
     },
   };
 }
