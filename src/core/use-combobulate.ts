@@ -74,7 +74,7 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     if (item === undefined) return;
     const mounted = virtualizer.getVirtualItems().some((row) => row.index === target);
     if (mounted) {
-      store.setActiveValue(store.itemValue(item, target));
+      store.setActiveValue(store.itemValue(item));
       return;
     }
     virtualizer.scrollToIndex(target);
@@ -90,7 +90,7 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     if (!virtualItems.some((row) => row.index === target)) return;
     const item = store.getState().filteredItems[target];
     if (item === undefined) return;
-    store.setActiveValue(store.itemValue(item, target));
+    store.setActiveValue(store.itemValue(item));
     pendingActiveRef.current = null;
   }, [virtualItems, store]);
 

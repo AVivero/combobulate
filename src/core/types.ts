@@ -104,6 +104,6 @@ export type CombobulateStore<T> = {
    * index), used verbatim — no case-folding, so ids differing only in case do
    * not collide. Doubles as the Ariakit option id.
    */
-  itemValue: (item: T, index: number) => string;
+  itemValue: (item: T) => string;
   onInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
 };
