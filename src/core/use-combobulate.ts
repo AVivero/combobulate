@@ -1,12 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { defaultFilterItems, defaultGetSearchText, isSameItem } from "./item-utils";
+import { defaultFilterItems, defaultGetSearchText, isSameItem, toChangeValue } from "./item-utils";
 import type { CombobulateApi, UseCombobulateOptions } from "./types";
-
-/** Convert the selected items to the value type expected by `onChange`. */
-function toChangeValue<T>(items: T[], multiple: boolean): T | T[] | null {
-  return multiple ? items : (items[0] ?? null);
-}
 
 /** Rows moved per PageUp/PageDown. A fixed page keeps the jump predictable
  *  across variable-height rows, where a measured "viewport of rows" would not. */

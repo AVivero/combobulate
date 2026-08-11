@@ -1,5 +1,5 @@
 import type { Virtualizer } from "@tanstack/react-virtual";
-import type { RefObject } from "react";
+import type { KeyboardEvent, RefObject } from "react";
 
 /**
  * Options accepted by {@link useCombobulate}. Deliberately tree-unaware.
@@ -47,6 +47,53 @@ export type UseCombobulateOptions<T> = {
    * and the input stays a pure search box. Ignored when `multiple` is true.
    */
   itemToInputValue?: (item: T) => string;
+};
+
+/**
+ * Reactive snapshot of a {@link CombobulateStore}. Every field is derived: the
+ * engine truth (open/input/active/selection) lives in the internal Ariakit
+ * combobox store, and the item-shaped fields are mapped back through the
+ * store's config on each read.
+ */
+export type CombobulateState<T> = {
+  isOpen: boolean;
+  inputValue: string;
+  /** The highlighted item's value string (Ariakit `activeId`), or "" when none. */
+  activeValue: string;
+  /** Index of {@link CombobulateState.activeValue} in `filteredItems`, or -1. */
+  activeIndex: number;
+  selectedItems: T[];
+  filteredItems: T[];
+  loading: boolean;
+  multiple: boolean;
+};
+
+/**
+ * Store handle composed over an Ariakit combobox store. The imperative methods
+ * work outside React (they read/write the Ariakit store directly); `useState`
+ * is a React hook for components that subscribes to the same store.
+ *
+ * The internal Ariakit store, virtualizer, and scroll ref are deliberately NOT
+ * on this type — they ride on the non-exported `_internal` bag returned by
+ * {@link createCombobulateStore}.
+ */
+export type CombobulateStore<T> = {
+  /** React hook: subscribe to a single derived field. */
+  useState: <K extends keyof CombobulateState<T>>(key: K) => CombobulateState<T>[K];
+  /** Imperative snapshot of the full derived state. */
+  getState: () => CombobulateState<T>;
+  setOpen: (open: boolean) => void;
+  setInputValue: (value: string) => void;
+  setActiveValue: (value: string) => void;
+  select: (item: T) => void;
+  isSelected: (item: T) => boolean;
+  /**
+   * The item's value string: the caller's `getItemId` (or the positional
+   * index), used verbatim — no case-folding, so ids differing only in case do
+   * not collide. Doubles as the Ariakit option id.
+   */
+  itemValue: (item: T, index: number) => string;
+  onInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
 };
 
 /** Public API returned by {@link useCombobulate}. */

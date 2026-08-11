@@ -37,6 +37,14 @@ export function defaultFilterItems<T>(
 }
 
 /**
+ * Convert the selected items to the value type expected by `onChange`:
+ * the whole array for multi-select, else the first item (or `null` when empty).
+ */
+export function toChangeValue<T>(items: T[], multiple: boolean): T | T[] | null {
+  return multiple ? items : (items[0] ?? null);
+}
+
+/**
  * Identity comparison for selection. Uses the caller's `getItemId` accessor
  * when provided so logically-equal items (e.g. objects re-fetched from an
  * API) are recognized as the same selection even across fresh references.
