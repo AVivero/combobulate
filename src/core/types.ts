@@ -1,5 +1,4 @@
-import type { Virtualizer } from "@tanstack/react-virtual";
-import type { KeyboardEvent, RefObject } from "react";
+import type { KeyboardEvent } from "react";
 
 /**
  * Options accepted by {@link useCombobulate}. Deliberately tree-unaware.
@@ -94,49 +93,4 @@ export type CombobulateStore<T> = {
    */
   itemValue: (item: T, index: number) => string;
   onInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
-};
-
-/** Public API returned by {@link useCombobulate}. */
-export type CombobulateApi<T> = {
-  isOpen: boolean;
-  setOpen: (next: boolean) => void;
-  inputValue: string;
-  setInputValue: (value: string) => void;
-  filteredItems: T[];
-  /** cmdk's highlighted item value (the controlled `value` on `<Command>`). */
-  activeValue: string;
-  setActiveValue: (value: string) => void;
-  /**
-   * Keydown handler for the input. Implements the jump keys cmdk cannot get
-   * right under virtualization (Home/End/PageUp/PageDown target the whole
-   * filtered list, not the mounted window) and passes every other key through
-   * to cmdk untouched.
-   */
-  onInputKeyDown: (event: import("react").KeyboardEvent) => void;
-  /** Index of {@link CombobulateApi.activeValue} in `filteredItems`, or -1. */
-  activeIndex: number;
-  selectedItems: T[];
-  select: (item: T) => void;
-  isSelected: (item: T) => boolean;
-  /**
-   * The item's cmdk `value` string: the caller's `getItemId` (or the positional
-   * index), used verbatim.
-   *
-   * cmdk emits `value` back through `onValueChange` unchanged — no
-   * case-folding, no trimming (pinned by `cmdk-behavior.test.tsx`), so the
-   * round-trip through `valueToIndex` needs no normalization. Deliberately
-   * NOT lowercased: that would make ids differing only in case collide
-   * silently in the map.
-   */
-  itemValue: (item: T, index: number) => string;
-  /** Screen-reader announcement string (result count / no-results / loading). */
-  announcement: string;
-  /** External loading flag, forwarded so primitives can render loading states. */
-  loading: boolean;
-  /** Whether multi-select is enabled; drives `aria-checked` on options. */
-  multiple: boolean;
-  /** Internal virtualizer. Exposed for the primitives, not part of the API contract. */
-  virtualizer: Virtualizer<HTMLElement, Element>;
-  /** Ref for the virtualized scroll container. */
-  scrollRef: RefObject<HTMLElement | null>;
 };

@@ -7,11 +7,12 @@ import "./demo.css";
 const CITIES = ["Paris", "Madrid", "Berlin", "Málaga", "Lisbon", "Rome", "Vienna", "Prague"];
 
 function MultiSelect() {
-  const { api, inputProps } = useDemoCombobox({
+  const { store, inputProps } = useDemoCombobox({
     items: CITIES,
     multiple: true,
     getItemId: (c) => c,
   });
+  const selectedItems = store.useState("selectedItems");
   return (
     <div style={{ width: 380 }}>
       {/* Chips stay in the page flow, as part of the control; only the option
@@ -20,14 +21,14 @@ function MultiSelect() {
         data-testid="chips"
         style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}
       >
-        {api.selectedItems.map((city) => (
-          <button key={city} type="button" onClick={() => api.select(city)}>
+        {selectedItems.map((city) => (
+          <button key={city} type="button" onClick={() => store.select(city)}>
             {city} ✕
           </button>
         ))}
       </div>
       <FloatingCombobox
-        api={api}
+        store={store}
         inputProps={inputProps}
         label="Cities"
         placeholder="Pick several…"

@@ -2,11 +2,7 @@ import { Combobulate as CombobulateBase } from "./core/primitives";
 import { Popover } from "./floating/floating-primitives";
 
 export { useCombobulate } from "./core/use-combobulate";
-export type {
-  CombobulateApi,
-  CombobulateStore,
-  UseCombobulateOptions,
-} from "./core/types";
+export type { CombobulateStore, UseCombobulateOptions } from "./core/types";
 export type {
   CombobulateItemProps,
   CombobulateListProps,

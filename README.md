@@ -49,11 +49,11 @@ import { Combobulate, useCombobulateFloating, useCombobulate } from "combobulate
 const CITIES = ["Paris", "Madrid", "Berlin" /* …thousands more */];
 
 function CityPicker() {
-  const api = useCombobulate({ items: CITIES, getItemId: (c) => c });
-  const floating = useCombobulateFloating(api, { closeOnSelect: true });
+  const combobox = useCombobulate({ items: CITIES, getItemId: (c) => c });
+  const floating = useCombobulateFloating(combobox, { closeOnSelect: true });
 
   return (
-    <Combobulate.Root api={api} label="Cities">
+    <Combobulate store={combobox} label="Cities">
       <Combobulate.Input ref={floating.reference} {...floating.referenceProps} aria-label="City" />
       <Combobulate.Popover floating={floating}>
         <Combobulate.List<string>>
@@ -66,7 +66,7 @@ function CityPicker() {
         <Combobulate.Empty>No results</Combobulate.Empty>
       </Combobulate.Popover>
       <Combobulate.LiveRegion />
-    </Combobulate.Root>
+    </Combobulate>
   );
 }
 ```
@@ -85,7 +85,7 @@ full-page search, a sidebar filter)? Skip the floating layer entirely — render
 `Combobulate.List` directly, no `useCombobulateFloating` / `Combobulate.Popover`:
 
 ```tsx
-<Combobulate.Root api={api} label="Cities">
+<Combobulate store={combobox} label="Cities">
   <Combobulate.Input aria-label="City" />
   <Combobulate.List<string>>
     {(item, index) => (
@@ -96,7 +96,7 @@ full-page search, a sidebar filter)? Skip the floating layer entirely — render
   </Combobulate.List>
   <Combobulate.Empty>No results</Combobulate.Empty>
   <Combobulate.LiveRegion />
-</Combobulate.Root>
+</Combobulate>
 ```
 
 ## Filtering
@@ -127,7 +127,7 @@ function RemoteCombobox() {
   const [items, setItems] = useState<Airport[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const api = useCombobulate({
+  const combobox = useCombobulate({
     items,
     loading,
     getItemId: (a) => a.iata,

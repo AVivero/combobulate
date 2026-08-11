@@ -11,7 +11,7 @@ const AIRPORTS = airports as Airport[];
 
 function WorldAirports() {
   // Default "includes" filter over the airport search text (city/name/iata/country).
-  const { api, inputProps } = useDemoCombobox({
+  const { store, inputProps } = useDemoCombobox({
     items: AIRPORTS,
     getItemId: (a) => a.iata,
     getSearchText: airportSearchText,
@@ -21,7 +21,7 @@ function WorldAirports() {
   return (
     <div style={{ width: 380 }}>
       <FloatingCombobox
-        api={api}
+        store={store}
         inputProps={inputProps}
         label="Airport"
         placeholder="Search ~3,300 airports…"
