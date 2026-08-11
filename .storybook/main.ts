@@ -1,4 +1,5 @@
 import type { StorybookConfig } from "@storybook/react-vite";
+import tailwindcss from "@tailwindcss/vite";
 
 const config: StorybookConfig = {
   stories: ["../examples/**/*.stories.tsx"],
@@ -15,6 +16,8 @@ const config: StorybookConfig = {
   async viteFinal(viteConfig) {
     return {
       ...viteConfig,
+      // Tailwind v4 for the examples' styling (library ships no styles).
+      plugins: [...(viteConfig.plugins ?? []), tailwindcss()],
       optimizeDeps: {
         ...viteConfig.optimizeDeps,
         include: [

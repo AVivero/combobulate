@@ -198,12 +198,14 @@ function List<T>({ children, maxHeight = 300 }: CombobulateListProps<T>) {
   );
 }
 
-/** Props for {@link Combobulate}'s `Item` component. */
+/** Props for {@link Combobulate}'s `Item` component. `className`/`style` and other
+ * attributes are forwarded to the option element, so state can be styled with
+ * `[data-active-item]` (hover/keyboard highlight), `[aria-selected]` /
+ * `[data-chosen]` (the chosen value), etc. */
 export type CombobulateItemProps<T> = {
   item: T;
   index: number;
-  children: ReactNode;
-};
+} & React.HTMLAttributes<HTMLDivElement>;
 
 /**
  * A single option row.
@@ -218,18 +220,22 @@ export type CombobulateItemProps<T> = {
  * (set input value / set selection / hide) are disabled — combobulate owns
  * selection and open state via `store.select`.
  */
-function Item<T>({ item, index, children }: CombobulateItemProps<T>) {
+function Item<T>({ item, index, children, ...rest }: CombobulateItemProps<T>) {
   const store = useCombobulateContext<T>();
   const multiple = store.useState("multiple");
   // Read selection reactively so chosen state stays live, and compute `chosen`
   // through the store's own identity accessor.
   const selectedItems = store.useState("selectedItems");
+  const filteredCount = store.useState("filteredItems").length;
   const chosen = selectedItems.some((selected) =>
     isSameItem(selected, item, store._internal.config.getItemId),
   );
   const value = store.itemValue(item);
   return (
     <Ariakit.ComboboxItem
+      // Consumer props first (className/style/…); combobulate's identity and
+      // ARIA below win on conflict.
+      {...rest}
       id={value}
       value={value}
       // Highlight the row on mouse hover (stamps `data-active-item`). Ariakit
@@ -242,7 +248,7 @@ function Item<T>({ item, index, children }: CombobulateItemProps<T>) {
       selectValueOnClick={false}
       hideOnClick={false}
       onClick={() => store.select(item)}
-      aria-setsize={store.useState("filteredItems").length}
+      aria-setsize={filteredCount}
       aria-posinset={index + 1}
       aria-selected={chosen ? true : undefined}
       aria-checked={multiple ? chosen : undefined}
