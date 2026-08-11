@@ -9,7 +9,13 @@ import "./demo.css";
 
 const AIRPORTS = airports as Airport[];
 
-function WorldAirports() {
+/**
+ * Single-select over ~3,300 real airports — the point of the library in one
+ * screen: a virtualized list that stays fully accessible. Picking fills the
+ * input with the chosen label (the committed-value model), and reopening shows
+ * the whole list again with the chosen row marked.
+ */
+function SingleSelect() {
   // Default "includes" filter over the airport search text (city/name/iata/country).
   const { store, inputProps } = useDemoCombobox({
     items: AIRPORTS,
@@ -38,9 +44,9 @@ function WorldAirports() {
   );
 }
 
-const meta: Meta<typeof WorldAirports> = {
-  title: "Combobulate/World Airports",
-  component: WorldAirports,
+const meta: Meta<typeof SingleSelect> = {
+  title: "Combobulate/Single Select",
+  component: SingleSelect,
 };
 export default meta;
-export const Default: StoryObj<typeof WorldAirports> = {};
+export const Default: StoryObj<typeof SingleSelect> = {};

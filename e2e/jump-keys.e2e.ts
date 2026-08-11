@@ -1,6 +1,6 @@
 import { type Page, expect, test } from "@playwright/test";
 
-const STORY = "/iframe.html?id=combobulate-world-airports--default&viewMode=story";
+const STORY = "/iframe.html?id=combobulate-single-select--default&viewMode=story";
 
 // Home/End are caret keys now; the jump is on the MODIFIER form (Ctrl/Cmd+End),
 // which combobulate owns and drives Ariakit's activeId over the FULL list.
@@ -57,15 +57,14 @@ test("PageDown moves a page at a time and stays mounted", async ({ page }) => {
 test("single-select: reopening after a pick marks the chosen option aria-selected", async ({
   page,
 }) => {
-  await page.goto("/iframe.html?id=combobulate-basic--default&viewMode=story");
+  await page.goto(STORY);
   const input = page.getByRole("combobox");
   await input.click();
-  await page.getByRole("option", { name: "Paris" }).click();
-  await expect(input).toHaveValue("Paris"); // committed
-  await input.click(); // reopen — the full list, Paris chosen
-  await expect(page.getByRole("option", { name: "Paris" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await expect(page.locator('[role="option"][aria-selected="true"]')).toHaveCount(1);
+  await input.fill("hokitika"); // exactly one match (HKK)
+  await page.getByRole("option").first().click();
+  await expect(input).toHaveValue(/HKK/); // committed label
+  await input.click(); // reopen — full list, chosen scrolled into view
+  const chosen = page.locator('[role="option"][aria-selected="true"]');
+  await expect(chosen).toHaveCount(1);
+  await expect(chosen).toContainText("HKK");
 });

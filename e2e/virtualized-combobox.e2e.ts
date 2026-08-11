@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const STORY = "/iframe.html?id=combobulate-world-airports--default&viewMode=story";
+const STORY = "/iframe.html?id=combobulate-single-select--default&viewMode=story";
 
 test("mounts only a window of the ~3,300 airports", async ({ page }) => {
   await page.goto(STORY);
@@ -54,6 +54,20 @@ test("holding ArrowDown past the mounted window keeps activedescendant mounted a
       })
       .toBe(String(expected));
   }
+});
+
+// Mouse hover must highlight the row it's over (parity with keyboard nav), not
+// just click-to-select. Ariakit stamps `data-active-item` on the hovered option
+// and points `aria-activedescendant` at it.
+test("hovering an option highlights it", async ({ page }) => {
+  await page.goto(STORY);
+  const input = page.getByRole("combobox");
+  await input.click();
+  const third = page.getByRole("option").nth(2);
+  const id = await third.getAttribute("id");
+  await third.hover();
+  await expect(third).toHaveAttribute("data-active-item", "true");
+  await expect(input).toHaveAttribute("aria-activedescendant", String(id));
 });
 
 test("arrow nav to a far row keeps aria-activedescendant mounted and in view", async ({ page }) => {
