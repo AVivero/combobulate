@@ -15,7 +15,7 @@ test("committed selection bypasses the filter (shows all)", () => {
   const store = createCombobulateStore({
     items: ITEMS,
     getItemId: (c) => c,
-    itemToInputValue: (c) => c,
+    getInputValue: (c) => c,
   });
   act(() => store.select("Berlin")); // input becomes "Berlin"
   expect(store.getState().inputValue).toBe("Berlin");
@@ -27,7 +27,7 @@ test("clearing the input to empty unselects (committed-value, single)", () => {
   const store = createCombobulateStore({
     items: ITEMS,
     getItemId: (c) => c,
-    itemToInputValue: (c) => c,
+    getInputValue: (c) => c,
     onChange: (v) => seen.push(v),
   });
   act(() => store.select("Berlin"));
@@ -40,7 +40,7 @@ test("revert-on-close restores the committed value", () => {
   const store = createCombobulateStore({
     items: ITEMS,
     getItemId: (c) => c,
-    itemToInputValue: (c) => c,
+    getInputValue: (c) => c,
   });
   act(() => store.select("Berlin"));
   act(() => store.setOpen(true)); // reopen (real open -> false transition below)

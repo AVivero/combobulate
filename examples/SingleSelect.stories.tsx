@@ -9,8 +9,6 @@ const AIRPORTS = airports as Airport[];
 // Row label. ~50 airports have a blank `city`; fall back to `country` so no row
 // renders a dangling "— Name (CODE)".
 const airportLabel = (a: Airport) => `${a.city || a.country} — ${a.name} (${a.iata})`;
-// Search text covering every field, so city-less airports stay findable.
-const airportSearch = (a: Airport) => [a.city, a.name, a.iata, a.country].filter(Boolean).join(" ");
 
 /**
  * Single-select over ~3,300 real airports, styled **entirely with Tailwind** —
@@ -23,8 +21,8 @@ function SingleSelect() {
   const store = useCombobulate<Airport>({
     items: AIRPORTS,
     getItemId: (a) => a.iata,
-    getSearchText: airportSearch,
-    itemToInputValue: airportLabel, // committed-value single-select (fills on pick)
+    getSearchText: (a: Airport) => [a.city, a.name, a.iata, a.country].filter(Boolean).join(" "),
+    getInputValue: airportLabel, // committed-value single-select (fills on pick)
     estimateSize: () => 44,
   });
   const floating = useCombobulateFloating(store, { closeOnSelect: true });

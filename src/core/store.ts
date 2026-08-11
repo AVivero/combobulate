@@ -34,12 +34,12 @@ export type CombobulateStoreInternal<T> = CombobulateStore<T> & {
       getItemId?: (item: T) => string;
       getSearchText: (item: T) => string;
       filterItems?: (items: T[], query: string) => T[];
-      itemToInputValue?: (item: T) => string;
+      getInputValue?: (item: T) => string;
       multiple: boolean;
       loading: boolean;
     };
     /**
-     * Committed-value model (single-select, opt-in via `itemToInputValue`):
+     * Committed-value model (single-select, opt-in via `getInputValue`):
      * if the input was edited away from the committed selection's display
      * value and not re-committed by a new selection, restore it. `setOpen`
      * calls this synchronously on `open -> false`. Exposed so a later task's
@@ -103,7 +103,7 @@ export function createCombobulateStore<T>(
     getItemId,
     getSearchText = defaultGetSearchText as (item: T) => string,
     filterItems,
-    itemToInputValue,
+    getInputValue,
     multiple = false,
     defaultValue = null,
     onChange,
@@ -207,14 +207,14 @@ export function createCombobulateStore<T>(
   };
 
   /**
-   * The committed-value model (single-select, opt-in via `itemToInputValue`):
+   * The committed-value model (single-select, opt-in via `getInputValue`):
    * what the input should show for the current selection, or "" when the
    * model isn't active or nothing is selected.
    */
   const committedValue = (): string => {
     const selected = selectedItems();
-    return itemToInputValue && !multiple && selected[0] !== undefined
-      ? itemToInputValue(selected[0])
+    return getInputValue && !multiple && selected[0] !== undefined
+      ? getInputValue(selected[0])
       : "";
   };
 
@@ -293,7 +293,7 @@ export function createCombobulateStore<T>(
    * double-handles. No-op when the committed-value model isn't active.
    */
   const commitOrRevert = (): void => {
-    if (!itemToInputValue || multiple) return;
+    if (!getInputValue || multiple) return;
     const committed = committedValue();
     if (combobox.getState().value !== committed) {
       combobox.setState("value", committed);
@@ -319,7 +319,7 @@ export function createCombobulateStore<T>(
     // it to empty means "nothing selected" — drop the selection. Single-select
     // only (multi-select keeps its chips). This runs only on user edits: the
     // programmatic fill/revert use the raw `combobox.setState`, not this.
-    if (value === "" && itemToInputValue && !multiple && selectedItems().length > 0) {
+    if (value === "" && getInputValue && !multiple && selectedItems().length > 0) {
       combobox.setState("selectedValue", "");
       onChange?.(toChangeValue([], multiple));
     }
@@ -349,7 +349,7 @@ export function createCombobulateStore<T>(
       // must not re-fetch for the label. Written BEFORE `onChange` fires (like
       // `setInputValue`'s clear-to-unselect branch) so a consumer reading
       // `getState().inputValue` synchronously inside `onChange` sees the fill.
-      if (itemToInputValue) combobox.setState("value", itemToInputValue(item));
+      if (getInputValue) combobox.setState("value", getInputValue(item));
       onChange?.(toChangeValue(itemsForValues([value]), false));
     }
   };
@@ -371,7 +371,7 @@ export function createCombobulateStore<T>(
       getItemId,
       getSearchText,
       filterItems,
-      itemToInputValue,
+      getInputValue,
       multiple,
       loading: currentLoading,
     },

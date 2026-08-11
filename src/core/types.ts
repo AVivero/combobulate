@@ -67,7 +67,7 @@ export type UseCombobulateOptions<T> = {
    * Read once when the store is created; pass a stable (module-level)
    * function rather than an inline closure over changing state.
    */
-  itemToInputValue?: (item: T) => string;
+  getInputValue?: (item: T) => string;
 };
 
 /**

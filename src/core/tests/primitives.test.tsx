@@ -154,7 +154,7 @@ function HighlightHarness() {
   const store = useCombobulate({
     items: ["Paris", "Berlin", "Madrid"],
     getItemId: (i) => i,
-    itemToInputValue: (i) => i,
+    getInputValue: (i) => i,
     defaultValue: "Berlin",
     defaultOpen: false,
   });
