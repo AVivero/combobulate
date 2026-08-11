@@ -11,24 +11,33 @@ export type UseCombobulateOptions<T> = {
   /** Full list of items to search over. */
   items: T[];
   /**
-   * Accessor for an item's searchable/display text. Read once when the store
-   * is created — pass a stable (module-level) function, not an inline
-   * closure over changing state; later changes to it are not picked up.
+   * The text the built-in filter searches for an item. Only used when
+   * `filterItems` is NOT provided: the default filter is a normalized,
+   * accent-insensitive substring match over this text. String items search
+   * themselves; for objects, point this at the field(s) you want searchable.
+   * Read once when the store is created — pass a stable (module-level) function,
+   * not an inline closure over changing state; later changes are not picked up.
    */
   getSearchText?: (item: T) => string;
   /**
-   * Accessor for an item's stable id. Falls back to the positional index.
-   * Ids must be unique — they become the Ariakit option ids (see
-   * {@link CombobulateStore.itemValue}). Read once when the store is
-   * created; pass a stable (module-level) function rather than an inline
-   * closure over changing state.
+   * Identity accessor — what makes two items *the same* item. Optional: when
+   * omitted, items are identified structurally (by object reference, or by value
+   * for primitives), which is correct for stable lists. Provide it when an item's
+   * object reference can change while the item stays logically the same — async
+   * re-fetches, lists rebuilt each render (`items={raw.map(...)}`), or a
+   * `defaultValue` loaded from a different source than `items`; without it, those
+   * cases lose the selection. The returned id must be unique and becomes the
+   * Ariakit option id (see {@link CombobulateStore.itemValue}). Read once when
+   * the store is created; pass a stable (module-level) function.
    */
   getItemId?: (item: T) => string;
   /**
-   * Custom filter. Defaults to a normalized substring match. Read once when
-   * the store is created — pass a stable (module-level) function, not an
-   * inline closure over changing state; later changes to it are not
-   * picked up.
+   * Replace the filter entirely — the single door for custom filtering (fuzzy,
+   * ranking, multi-field, async-shaped results). Receives the full items and the
+   * query and returns the matches, in display order. When omitted, the built-in
+   * normalized substring filter runs over `getSearchText(item)`. Read once when
+   * the store is created — pass a stable (module-level) function, not an inline
+   * closure over changing state; later changes are not picked up.
    */
   filterItems?: (items: T[], query: string) => T[];
   /** Initial selection for the uncontrolled case. */
