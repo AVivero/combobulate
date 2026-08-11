@@ -249,3 +249,35 @@ test("store: controlled value seeds selection + committed input on create", () =
   expect(store.getState().selectedItems).toEqual(["Paris"]);
   expect(store.getState().inputValue).toBe("City: Paris");
 });
+
+test("store: controlled multi — select/setValue fire onChange but don't mutate selection", () => {
+  const seen: unknown[] = [];
+  const store = createCombobulateStore({
+    items: ITEMS,
+    getItemId: (c) => c,
+    multiple: true,
+    value: [],
+    onChange: (v) => seen.push(v),
+  });
+  act(() => store.select("Paris"));
+  act(() => store.setValue(["Berlin", "Madrid"]));
+  expect(store.getState().selectedItems).toEqual([]); // parent owns value
+  expect(seen).toEqual([["Paris"], ["Berlin", "Madrid"]]);
+});
+
+test("store: setSelectedValue refreshes committed input when closed, not when open", () => {
+  const store = createCombobulateStore({
+    items: ITEMS,
+    getItemId: (c) => c,
+    value: null,
+    getInputValue: (c) => `City: ${c}`,
+  });
+  // closed: reflect updates the committed input
+  act(() => store._internal.setSelectedValue(["Paris"]));
+  expect(store.getState().inputValue).toBe("City: Paris");
+  // open + a typed search: reflect must NOT clobber it
+  act(() => store.setOpen(true));
+  act(() => store.setInputValue("mad"));
+  act(() => store._internal.setSelectedValue(["Berlin"]));
+  expect(store.getState().inputValue).toBe("mad");
+});

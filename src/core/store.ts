@@ -369,8 +369,8 @@ export function createCombobulateStore<T>(
     const values = items.map((item) => valueOfItem(item));
     if (!controlled) {
       combobox.setState("selectedValue", multiple ? values : (values[0] ?? ""));
-      // Keep the committed input in step (single-select model): fill for a
-      // replacement, clear when emptied. Raw setter — not user typing.
+      /** Keep the committed input in step (single-select model): fill for a
+       * replacement, clear when emptied. Raw setter — not user typing. */
       if (getInputValue && !multiple) {
         combobox.setState("value", items[0] !== undefined ? getInputValue(items[0]) : "");
       }
