@@ -13,6 +13,10 @@ jobs:
       - run: bun run typecheck
       - run: bun test
       - run: bun run build
+      # Packaging correctness gate: publint (exports/main/module/types, files,
+      # ESM/CJS sanity) + attw (type resolution across node10/node16/bundler).
+      # Catches publish regressions like CJS types masquerading as ESM before a tag.
+      - run: bun run check:packaging
       # e2e is the sole guard for two real-browser couplings unit tests can't
       # cover: the Ariakit capture-phase navigation seam (the ArrowDown
       # double-move class of bug) and the virtualization<->activedescendant
