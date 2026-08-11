@@ -279,6 +279,12 @@ export function createCombobulateStore<T>(
   };
 
   const setOpen = (open: boolean): void => {
+    // Only act on a genuine transition: blur + closeOnSelect can both drive
+    // `setOpen(false)` for the same close, and a consumer mirroring open
+    // state via `onOpenChange` must not see a duplicate call with no
+    // intervening open. Guarding here also protects revert-on-close below —
+    // it must fire once per real open -> false transition, not once per call.
+    if (combobox.getState().open === open) return;
     if (!open) commitOrRevert();
     combobox.setState("open", open);
     onOpenChange?.(open);
@@ -315,12 +321,14 @@ export function createCombobulateStore<T>(
       onChange?.(toChangeValue(itemsForValues(next), true));
     } else {
       combobox.setState("selectedValue", value);
-      onChange?.(toChangeValue(itemsForValues([value]), false));
       // Fill-on-select (committed-value model): show the pick in the input,
       // via the raw setter so `onInputChange` does NOT fire — this is a
       // programmatic change, not user typing, and a remote-search consumer
-      // must not re-fetch for the label.
+      // must not re-fetch for the label. Written BEFORE `onChange` fires (like
+      // `setInputValue`'s clear-to-unselect branch) so a consumer reading
+      // `getState().inputValue` synchronously inside `onChange` sees the fill.
       if (itemToInputValue) combobox.setState("value", itemToInputValue(item));
+      onChange?.(toChangeValue(itemsForValues([value]), false));
     }
   };
 

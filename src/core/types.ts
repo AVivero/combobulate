@@ -10,15 +10,26 @@ import type { KeyboardEvent } from "react";
 export type UseCombobulateOptions<T> = {
   /** Full list of items to search over. */
   items: T[];
-  /** Accessor for an item's searchable/display text. */
+  /**
+   * Accessor for an item's searchable/display text. Read once when the store
+   * is created — pass a stable (module-level) function, not an inline
+   * closure over changing state; later changes to it are not picked up.
+   */
   getSearchText?: (item: T) => string;
   /**
    * Accessor for an item's stable id. Falls back to the positional index.
    * Ids must be unique — they become the Ariakit option ids (see
-   * {@link CombobulateStore.itemValue}).
+   * {@link CombobulateStore.itemValue}). Read once when the store is
+   * created; pass a stable (module-level) function rather than an inline
+   * closure over changing state.
    */
   getItemId?: (item: T) => string;
-  /** Custom filter. Defaults to a normalized substring match. */
+  /**
+   * Custom filter. Defaults to a normalized substring match. Read once when
+   * the store is created — pass a stable (module-level) function, not an
+   * inline closure over changing state; later changes to it are not
+   * picked up.
+   */
   filterItems?: (items: T[], query: string) => T[];
   /** Initial selection for the uncontrolled case. */
   defaultValue?: T | T[] | null;
@@ -30,7 +41,7 @@ export type UseCombobulateOptions<T> = {
   defaultOpen?: boolean;
   /** Fired when open state changes. */
   onOpenChange?: (open: boolean) => void;
-  /** Allow selecting multiple items. */
+  /** Allow selecting multiple items. Read once when the store is created. */
   multiple?: boolean;
   /** External loading flag for async data. Drives the live-region announcement. */
   loading?: boolean;
@@ -44,6 +55,8 @@ export type UseCombobulateOptions<T> = {
    * a selection shows the whole list instead of filtering to it, and an
    * abandoned search reverts to the selection on close. Omit it (the default)
    * and the input stays a pure search box. Ignored when `multiple` is true.
+   * Read once when the store is created; pass a stable (module-level)
+   * function rather than an inline closure over changing state.
    */
   itemToInputValue?: (item: T) => string;
 };

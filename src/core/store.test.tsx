@@ -93,6 +93,53 @@ test("store: onInputKeyDown bare Home/End are NOT owned (caret passthrough)", ()
   expect(store.getState().activeIndex).toBe(1); // untouched
 });
 
+test("store: select writes inputValue BEFORE firing onChange (committed-value fill)", () => {
+  let inputValueDuringOnChange: string | undefined;
+  const store = createCombobulateStore({
+    items: ITEMS,
+    getItemId: (c) => c,
+    itemToInputValue: (c) => `Selected: ${c}`,
+    onChange: () => {
+      inputValueDuringOnChange = store.getState().inputValue;
+    },
+  });
+  act(() => store.select("Berlin"));
+  expect(inputValueDuringOnChange).toBe("Selected: Berlin");
+  expect(store.getState().inputValue).toBe("Selected: Berlin");
+});
+
+test("store: setOpen(false) when already closed does not fire onOpenChange", () => {
+  let calls = 0;
+  const store = createCombobulateStore({
+    items: ITEMS,
+    getItemId: (c) => c,
+    onOpenChange: () => {
+      calls += 1;
+    },
+  });
+  expect(store.getState().isOpen).toBe(false);
+  act(() => store.setOpen(false));
+  expect(calls).toBe(0);
+  expect(store.getState().isOpen).toBe(false);
+});
+
+test("store: setOpen fires onOpenChange on a real transition", () => {
+  const seen: boolean[] = [];
+  const store = createCombobulateStore({
+    items: ITEMS,
+    getItemId: (c) => c,
+    onOpenChange: (open) => {
+      seen.push(open);
+    },
+  });
+  act(() => store.setOpen(true));
+  expect(seen).toEqual([true]);
+  act(() => store.setOpen(true)); // no-op, already open
+  expect(seen).toEqual([true]);
+  act(() => store.setOpen(false));
+  expect(seen).toEqual([true, false]);
+});
+
 test("store: onInputKeyDown Ctrl+End jumps to the last item", () => {
   const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
   act(() => store.setActiveValue(store.itemValue("Paris", 0)));

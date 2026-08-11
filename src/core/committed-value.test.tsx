@@ -43,6 +43,7 @@ test("revert-on-close restores the committed value", () => {
     itemToInputValue: (c) => c,
   });
   act(() => store.select("Berlin"));
+  act(() => store.setOpen(true)); // reopen (real open -> false transition below)
   act(() => store.setInputValue("par")); // start typing a new query
   act(() => store.setOpen(false)); // close without choosing
   expect(store.getState().inputValue).toBe("Berlin");
