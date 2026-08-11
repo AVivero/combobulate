@@ -29,7 +29,9 @@ export function SingleControlled() {
     <div className="w-[380px]">
       <div className="mb-2 text-xs text-zinc-500">
         Parent state:{" "}
-        <span className="font-mono text-indigo-700">{airport ? airport.iata : "—"}</span>
+        <span data-testid="parent-state" className="font-mono text-indigo-700">
+          {airport ? airport.iata : "—"}
+        </span>
       </div>
       <Combobulate store={store} label="Airport">
         <Combobulate.Input

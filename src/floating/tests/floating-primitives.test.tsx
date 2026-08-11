@@ -13,7 +13,11 @@ function Demo({ open }: { open: boolean }) {
   const floating = useCombobulateFloating(store);
   return (
     <Combobulate store={store}>
-      <Combobulate.Input ref={floating.reference} {...floating.referenceProps} aria-label="Search" />
+      <Combobulate.Input
+        ref={floating.reference}
+        {...floating.referenceProps}
+        aria-label="Search"
+      />
       <Popover floating={floating}>
         <div data-testid="panel">panel</div>
       </Popover>

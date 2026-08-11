@@ -128,7 +128,7 @@ export function Booking() {
       </div>
       <div className="text-xs text-zinc-500">
         Route:{" "}
-        <span className="font-mono text-indigo-700">
+        <span data-testid="route" className="font-mono text-indigo-700">
           {origin ? origin.iata : "—"} → {destination ? destination.iata : "—"}
         </span>
       </div>
