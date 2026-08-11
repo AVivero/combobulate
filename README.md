@@ -32,7 +32,7 @@ Combobulate closes that gap:
 ## Install
 
 ```sh
-bun add combobulate
+bun add combobulate-react
 ```
 
 Only `react` and `react-dom` are peers. Ariakit, TanStack Virtual, and Floating
@@ -47,7 +47,7 @@ viewport, and dismiss it on outside-click or Escape (and on select, with
 `closeOnSelect`).
 
 ```tsx
-import { Combobulate, useCombobulateFloating, useCombobulate } from "combobulate";
+import { Combobulate, useCombobulateFloating, useCombobulate } from "combobulate-react";
 
 const CITIES = ["Paris", "Madrid", "Berlin" /* …thousands more */];
 

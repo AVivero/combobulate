@@ -6,7 +6,7 @@
       "name": "combobulate",
       "dependencies": {
         "@ariakit/components": "0.1.10",
-        "@ariakit/react": "~0.4.37",
+        "@ariakit/react": "0.4.37",
         "@ariakit/store": "0.1.8",
         "@floating-ui/react": "^0.27",
         "@tanstack/react-virtual": "~3.14.6",

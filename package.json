@@ -1,5 +1,5 @@
 {
-  "name": "combobulate",
+  "name": "combobulate-react",
   "version": "0.1.0",
   "description": "The headless toolkit for accessible, virtualized autocompletes.",
   "license": "MIT",
@@ -38,6 +38,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "prepublishOnly": "bun run build && bun run check:packaging",
     "check:packaging": "publint && attw --pack",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
@@ -54,7 +55,7 @@
   },
   "dependencies": {
     "@ariakit/components": "0.1.10",
-    "@ariakit/react": "~0.4.37",
+    "@ariakit/react": "0.4.37",
     "@ariakit/store": "0.1.8",
     "@floating-ui/react": "^0.27",
     "@tanstack/react-virtual": "~3.14.6"
