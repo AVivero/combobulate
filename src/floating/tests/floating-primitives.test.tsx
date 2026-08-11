@@ -1,10 +1,10 @@
 import { afterEach, expect, test } from "bun:test";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { Combobulate } from "../core/primitives";
-import { useCombobulate } from "../core/use-combobulate";
-import { stubElementLayout } from "../test-utils/stub-element-layout";
-import { Popover } from "./floating-primitives";
-import { useCombobulateFloating } from "./use-floating";
+import { Combobulate } from "../../core/primitives";
+import { useCombobulate } from "../../core/use-combobulate";
+import { stubElementLayout } from "../../test-utils/stub-element-layout";
+import { Popover } from "../floating-primitives";
+import { useCombobulateFloating } from "../use-floating";
 
 afterEach(() => cleanup());
 

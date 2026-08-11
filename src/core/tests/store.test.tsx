@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { createCombobulateStore } from "./store";
+import { createCombobulateStore } from "../store";
 
 afterEach(() => cleanup());
 

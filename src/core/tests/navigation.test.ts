@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { nextIndex } from "./navigation";
+import { nextIndex } from "../navigation";
 
 const K = (key: string, mod: Partial<{ ctrlKey: boolean; metaKey: boolean }> = {}) => ({
   key,

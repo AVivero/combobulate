@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
-import { createCombobulateStore } from "../core/store";
-import { useCombobulateFloating } from "./use-floating";
+import { createCombobulateStore } from "../../core/store";
+import { useCombobulateFloating } from "../use-floating";
 
 test("returns the floating wiring shape", () => {
   const store = createCombobulateStore({ items: ["Paris"] });

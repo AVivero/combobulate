@@ -1,8 +1,8 @@
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { stubElementLayout } from "../test-utils/stub-element-layout";
-import { Combobulate } from "./primitives";
-import { useCombobulate } from "./use-combobulate";
+import { stubElementLayout } from "../../test-utils/stub-element-layout";
+import { Combobulate } from "../primitives";
+import { useCombobulate } from "../use-combobulate";
 
 let restore: () => void;
 beforeAll(() => {

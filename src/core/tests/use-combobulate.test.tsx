@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
 import { StrictMode } from "react";
-import { stubElementLayout } from "../test-utils/stub-element-layout";
-import type { CombobulateStoreInternal } from "./store";
-import { useCombobulate } from "./use-combobulate";
+import { stubElementLayout } from "../../test-utils/stub-element-layout";
+import type { CombobulateStoreInternal } from "../store";
+import { useCombobulate } from "../use-combobulate";
 
 /**
  * Hook-level tests. `useCombobulate` returns the store handle, so state is read

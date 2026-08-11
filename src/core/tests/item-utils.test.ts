@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { defaultFilterItems, defaultGetSearchText, normalizeText } from "./item-utils";
+import { defaultFilterItems, defaultGetSearchText, normalizeText } from "../item-utils";
 
 test("normalizeText lowercases and strips diacritics", () => {
   expect(normalizeText("Málaga")).toBe("malaga");

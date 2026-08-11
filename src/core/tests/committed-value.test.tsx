@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { act, cleanup } from "@testing-library/react";
-import { createCombobulateStore } from "./store";
+import { createCombobulateStore } from "../store";
 
 afterEach(() => cleanup());
 const ITEMS = ["Paris", "Madrid", "Berlin", "Málaga"];
