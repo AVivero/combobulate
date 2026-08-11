@@ -5,11 +5,11 @@
 ```sh
 bun install
 bun test        # unit + component tests (happy-dom)
-bun run e2e      # Playwright end-to-end tests against Storybook
+bun run e2e      # Playwright end-to-end tests against the examples app
 bun run typecheck
 bun run lint     # Biome, zero warnings required
 bun run build    # tsup → dist/
-bun run storybook
+bun run dev
 ```
 
 ## ⚠️ Upgrading `@ariakit/react`

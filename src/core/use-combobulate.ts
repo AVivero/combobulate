@@ -125,12 +125,20 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     if (index >= 0) store._internal.requestActive(index);
   }, [isOpen, multiple, selectedItems, store]);
 
-  // Sync changed `items`/`loading` props into the store (created with the
-  // initial values). Both setters no-op when the value is unchanged, so these
-  // are inert on mount and on unrelated re-renders.
-  useEffect(() => {
+  /**
+   * Sync changed `items` into the store BEFORE the controlled reflect below.
+   * A layout effect ordered first: React runs layout effects in declaration
+   * order, so the value->item map is rebuilt before the reflect resolves the
+   * committed input. Without this, a combined `value`+`items` change (a
+   * dependent list — e.g. a swap where the new selection was absent from the
+   * previous list) would resolve against a stale map and blank the input.
+   * `setItems` no-ops when the contents are unchanged, so this is inert
+   * otherwise.
+   */
+  useLayoutEffect(() => {
     store._internal.setItems(items);
   }, [items, store]);
+  // `loading` has no ordering constraint — a passive effect is fine.
   useEffect(() => {
     store._internal.setLoading(loading);
   }, [loading, store]);

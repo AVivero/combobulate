@@ -340,3 +340,26 @@ test("controlled single-select with getInputValue pre-fills the committed input"
   );
   expect(result.current.getState().inputValue).toBe("City: Paris");
 });
+
+test("controlled: combined value+items change (dependent list / swap) refreshes committed input", () => {
+  const { result } = renderHook(() => {
+    const [value, setValue] = useState<string | null>("Paris");
+    const [excluded, setExcluded] = useState<string>("Berlin");
+    const items = ITEMS.filter((c) => c !== excluded);
+    const store = useCombobulate<string>({
+      items,
+      value,
+      getItemId: (c) => c,
+      getInputValue: (c) => `City: ${c}`,
+    });
+    const swap = () => {
+      setValue("Berlin");
+      setExcluded("Paris");
+    };
+    return { store, swap };
+  });
+  expect(result.current.store.getState().inputValue).toBe("City: Paris");
+  act(() => result.current.swap());
+  expect(result.current.store.getState().selectedItems).toEqual(["Berlin"]);
+  expect(result.current.store.getState().inputValue).toBe("City: Berlin");
+});
