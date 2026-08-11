@@ -176,3 +176,76 @@ test("without getItemId, fallback ids are stable, unique, and position-independe
   expect(store.getState().selectedItems).toEqual([berlin]);
   expect(store.isSelected(berlin)).toBe(true);
 });
+
+test("store: setValue replaces selection and fires onChange (uncontrolled single)", () => {
+  const seen: unknown[] = [];
+  const store = createCombobulateStore({
+    items: ITEMS,
+    getItemId: (c) => c,
+    onChange: (v) => seen.push(v),
+  });
+  act(() => store.setValue("Berlin"));
+  expect(store.getState().selectedItems).toEqual(["Berlin"]);
+  expect(seen).toEqual(["Berlin"]);
+});
+
+test("store: setValue(null) clears (uncontrolled single)", () => {
+  const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
+  act(() => store.select("Paris"));
+  act(() => store.setValue(null));
+  expect(store.getState().selectedItems).toEqual([]);
+});
+
+test("store: setValue([]) clears (uncontrolled multi)", () => {
+  const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c, multiple: true });
+  act(() => store.select("Paris"));
+  act(() => store.select("Berlin"));
+  act(() => store.setValue([]));
+  expect(store.getState().selectedItems).toEqual([]);
+});
+
+test("store: controlled — select fires onChange but does NOT mutate selection", () => {
+  const seen: unknown[] = [];
+  const store = createCombobulateStore({
+    items: ITEMS,
+    getItemId: (c) => c,
+    value: null,
+    onChange: (v) => seen.push(v),
+  });
+  act(() => store.select("Berlin"));
+  expect(seen).toEqual(["Berlin"]); // request emitted
+  expect(store.getState().selectedItems).toEqual([]); // parent owns value; no internal mutation
+});
+
+test("store: controlled — setValue fires onChange only", () => {
+  const seen: unknown[] = [];
+  const store = createCombobulateStore({
+    items: ITEMS,
+    getItemId: (c) => c,
+    value: null,
+    onChange: (v) => seen.push(v),
+  });
+  act(() => store.setValue("Madrid"));
+  expect(seen).toEqual(["Madrid"]);
+  expect(store.getState().selectedItems).toEqual([]);
+});
+
+test("store: setSelectedValue reflects value strings into selectedItems", () => {
+  const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c, value: null });
+  act(() => store._internal.setSelectedValue(["Madrid"]));
+  expect(store.getState().selectedItems).toEqual(["Madrid"]);
+  const first = store.getState().selectedItems;
+  act(() => store._internal.setSelectedValue(["Madrid"])); // unchanged
+  expect(store.getState().selectedItems).toBe(first); // identity-stable no-op
+});
+
+test("store: controlled value seeds selection + committed input on create", () => {
+  const store = createCombobulateStore({
+    items: ITEMS,
+    getItemId: (c) => c,
+    value: "Paris",
+    getInputValue: (c) => `City: ${c}`,
+  });
+  expect(store.getState().selectedItems).toEqual(["Paris"]);
+  expect(store.getState().inputValue).toBe("City: Paris");
+});

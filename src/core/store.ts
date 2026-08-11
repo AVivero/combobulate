@@ -76,6 +76,8 @@ export type CombobulateStoreInternal<T> = CombobulateStore<T> & {
      */
     setItems: (items: T[]) => void;
     setLoading: (loading: boolean) => void;
+    setSelectedValue: (values: string[]) => void;
+    setControlled: (controlled: boolean) => void;
   };
 };
 
@@ -105,12 +107,19 @@ export function createCombobulateStore<T>(
     filterItems,
     getInputValue,
     multiple = false,
+    value,
     defaultValue = null,
     onChange,
     onInputChange,
     onOpenChange,
     defaultOpen = false,
   } = options;
+
+  /** Live controlled flag: true while a `value` prop is supplied. The hook keeps
+   * this current each render via `_internal.setControlled`; the selection
+   * mutators below read it so a user pick only *requests* a change (fires
+   * `onChange`) in controlled mode, leaving the prop as the source of truth. */
+  let controlled = value !== undefined;
 
   /**
    * `items`/`loading` are mutable: the hook pushes changed props in via
@@ -178,17 +187,23 @@ export function createCombobulateStore<T>(
     return result;
   };
 
-  const seedValues = toValueArray(
-    defaultValue == null
-      ? []
-      : (Array.isArray(defaultValue) ? defaultValue : [defaultValue]).map((item) =>
-          valueOfItem(item),
-        ),
-  );
+  const seedSource = value !== undefined ? value : defaultValue;
+  const seedItems: T[] =
+    seedSource == null ? [] : Array.isArray(seedSource) ? seedSource : [seedSource];
+  const seedValues = seedItems.map((item) => valueOfItem(item));
+  /** Pre-fill the input for a seeded single-select selection under the
+   * committed-value model — closes the `defaultValue`/`value` + `getInputValue`
+   * "input starts blank" gap. */
+  const seedInput =
+    getInputValue && !multiple && seedItems[0] !== undefined ? getInputValue(seedItems[0]) : "";
 
   const combobox: ComboboxStore = multiple
     ? createComboboxStore({ defaultOpen, defaultSelectedValue: seedValues })
-    : createComboboxStore({ defaultOpen, defaultSelectedValue: seedValues[0] ?? "" });
+    : createComboboxStore({
+        defaultOpen,
+        defaultSelectedValue: seedValues[0] ?? "",
+        defaultValue: seedInput,
+      });
 
   /**
    * Cache the derived `selectedItems` behind the `selectedValue` reference so
@@ -320,7 +335,7 @@ export function createCombobulateStore<T>(
     // only (multi-select keeps its chips). This runs only on user edits: the
     // programmatic fill/revert use the raw `combobox.setState`, not this.
     if (value === "" && getInputValue && !multiple && selectedItems().length > 0) {
-      combobox.setState("selectedValue", "");
+      if (!controlled) combobox.setState("selectedValue", "");
       onChange?.(toChangeValue([], multiple));
     }
   };
@@ -339,19 +354,28 @@ export function createCombobulateStore<T>(
       const next = current.includes(value)
         ? current.filter((existing) => existing !== value)
         : [...current, value];
-      combobox.setState("selectedValue", next);
+      if (!controlled) combobox.setState("selectedValue", next);
       onChange?.(toChangeValue(itemsForValues(next), true));
     } else {
-      combobox.setState("selectedValue", value);
-      // Fill-on-select (committed-value model): show the pick in the input,
-      // via the raw setter so `onInputChange` does NOT fire — this is a
-      // programmatic change, not user typing, and a remote-search consumer
-      // must not re-fetch for the label. Written BEFORE `onChange` fires (like
-      // `setInputValue`'s clear-to-unselect branch) so a consumer reading
-      // `getState().inputValue` synchronously inside `onChange` sees the fill.
+      if (!controlled) combobox.setState("selectedValue", value);
+      // Fill-on-select runs in BOTH modes — the input is never controlled.
       if (getInputValue) combobox.setState("value", getInputValue(item));
       onChange?.(toChangeValue(itemsForValues([value]), false));
     }
+  };
+
+  const setValue = (next: T | T[] | null): void => {
+    const items = next == null ? [] : Array.isArray(next) ? next : [next];
+    const values = items.map((item) => valueOfItem(item));
+    if (!controlled) {
+      combobox.setState("selectedValue", multiple ? values : (values[0] ?? ""));
+      // Keep the committed input in step (single-select model): fill for a
+      // replacement, clear when emptied. Raw setter — not user typing.
+      if (getInputValue && !multiple) {
+        combobox.setState("value", items[0] !== undefined ? getInputValue(items[0]) : "");
+      }
+    }
+    onChange?.(toChangeValue(items, multiple));
   };
 
   const isSelected = (item: T): boolean =>
@@ -415,6 +439,25 @@ export function createCombobulateStore<T>(
       internal.config.loading = next;
       emit();
     },
+    /** Reflect a controlled `value` (as value-strings) into the engine. Raw —
+     * no `onChange` (the change originated from the parent). No-op when the
+     * selection already matches. In single-select + `getInputValue`, also
+     * refresh the committed input, but only while the popover is closed so an
+     * in-progress search is never clobbered (revert-on-close covers the open
+     * case). */
+    setSelectedValue: (values: string[]): void => {
+      const current = toValueArray(combobox.getState().selectedValue);
+      const same = current.length === values.length && current.every((v, i) => v === values[i]);
+      if (same) return;
+      combobox.setState("selectedValue", multiple ? values : (values[0] ?? ""));
+      if (getInputValue && !multiple && !combobox.getState().open) {
+        combobox.setState("value", committedValue());
+      }
+    },
+    /** Keep the live controlled flag current (called by the hook each render). */
+    setControlled: (next: boolean): void => {
+      controlled = next;
+    },
   };
 
   /**
@@ -443,6 +486,7 @@ export function createCombobulateStore<T>(
     setInputValue,
     setActiveValue,
     select,
+    setValue,
     isSelected,
     itemValue,
     onInputKeyDown,
