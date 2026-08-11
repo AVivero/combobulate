@@ -213,7 +213,7 @@ function Item<T>({ item, index, children }: CombobulateItemProps<T>) {
   const chosen = selectedItems.some((selected) =>
     isSameItem(selected, item, store._internal.config.getItemId),
   );
-  const value = store.itemValue(item, index);
+  const value = store.itemValue(item);
   return (
     <Ariakit.ComboboxItem
       id={value}

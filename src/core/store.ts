@@ -127,23 +127,45 @@ export function createCombobulateStore<T>(
   };
 
   /**
-   * Used verbatim (no case-folding): ids differing only in case must not
-   * collide. Doubles as the Ariakit option id, so `activeId` === this value.
+   * Stable fallback ids when the consumer doesn't supply `getItemId`. Keyed by
+   * object REFERENCE (WeakMap) or primitive VALUE (Map) so an item keeps the same
+   * id for the store's lifetime, independent of its position. A positional index
+   * would shift as the list is filtered/reordered — and since the rendered option
+   * used its FILTERED index while the store mapped values by the UNFILTERED index,
+   * the same id string could denote different items in different filter states,
+   * desyncing selection and the active highlight. Reference/value keys remove that
+   * ambiguity entirely. (An async re-fetch that returns fresh object references
+   * still needs `getItemId` to be recognised as the same item — nothing can span
+   * a new reference without an id accessor.)
    */
-  const itemValue = (item: T, index: number): string =>
-    getItemId ? getItemId(item) : String(index);
-
-  const valueOfItem = (item: T): string => {
-    const index = currentItems.findIndex((candidate) => isSameItem(candidate, item, getItemId));
-    return itemValue(item, index);
+  const objectIds = new WeakMap<object, string>();
+  const primitiveIds = new Map<unknown, string>();
+  let fallbackCounter = 0;
+  const fallbackId = (item: T): string => {
+    if (item !== null && (typeof item === "object" || typeof item === "function")) {
+      const obj = item as object;
+      const existing = objectIds.get(obj);
+      if (existing !== undefined) return existing;
+      const id = `cbl-${fallbackCounter++}`;
+      objectIds.set(obj, id);
+      return id;
+    }
+    const existing = primitiveIds.get(item);
+    if (existing !== undefined) return existing;
+    const id = `cbl-${fallbackCounter++}`;
+    primitiveIds.set(item, id);
+    return id;
   };
+
+  // The option's stable value/id. Doubles as the Ariakit option id, so
+  // `activeId` === this value. Independent of position (see `fallbackId`).
+  const itemValue = (item: T): string => (getItemId ? getItemId(item) : fallbackId(item));
+  const valueOfItem = itemValue;
 
   /** Reverse map value -> item, for turning `selectedValue` back into items. */
   const buildItemByValue = (list: T[]): Map<string, T> => {
     const map = new Map<string, T>();
-    list.forEach((item, index) => {
-      map.set(itemValue(item, index), item);
-    });
+    for (const item of list) map.set(itemValue(item), item);
     return map;
   };
   let itemByValue = buildItemByValue(currentItems);
@@ -232,7 +254,7 @@ export function createCombobulateStore<T>(
     const activeIndex =
       activeValue === ""
         ? -1
-        : filteredItemsSnapshot.findIndex((item, index) => itemValue(item, index) === activeValue);
+        : filteredItemsSnapshot.findIndex((item) => itemValue(item) === activeValue);
     return {
       isOpen: state.open,
       inputValue: state.value,
@@ -360,7 +382,7 @@ export function createCombobulateStore<T>(
     requestActive: (target: number): void => {
       const item = filteredItems()[target];
       if (item === undefined) return;
-      combobox.setState("activeId", itemValue(item, target));
+      combobox.setState("activeId", itemValue(item));
     },
     // Injected by the hook (see `useCombobulate`); null/empty headlessly.
     virtualizer: null,

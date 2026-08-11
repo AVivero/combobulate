@@ -70,7 +70,7 @@ test("multi select toggles membership", () => {
 
 test("itemValue is the id verbatim and maps back to the filtered index", () => {
   const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
-  const value = result.current.itemValue("Madrid", 1);
+  const value = result.current.itemValue("Madrid");
   // Verbatim — not case-folded. It doubles as the Ariakit option id.
   expect(value).toBe("Madrid");
   act(() => result.current.setActiveValue(value));
@@ -79,9 +79,9 @@ test("itemValue is the id verbatim and maps back to the filtered index", () => {
 
 test("ids differing only in case are distinct items, not a collision", () => {
   const { result } = renderHook(() => useCombobulate({ items: ["AB", "ab"], getItemId: (c) => c }));
-  act(() => result.current.setActiveValue(result.current.itemValue("ab", 1)));
+  act(() => result.current.setActiveValue(result.current.itemValue("ab")));
   expect(result.current.getState().activeIndex).toBe(1);
-  act(() => result.current.setActiveValue(result.current.itemValue("AB", 0)));
+  act(() => result.current.setActiveValue(result.current.itemValue("AB")));
   expect(result.current.getState().activeIndex).toBe(0);
 });
 
@@ -103,7 +103,7 @@ test("keep-visible: changing the active value scrolls that index into view", () 
     calls.push(i);
   }) as typeof virtualizer.scrollToIndex;
 
-  act(() => result.current.setActiveValue(result.current.itemValue("Item 500", 500)));
+  act(() => result.current.setActiveValue(result.current.itemValue("Item 500")));
   expect(calls).toContain(500);
 });
 
@@ -118,7 +118,7 @@ test("keep-visible stays quiet while closed", () => {
   virtualizer.scrollToIndex = ((i: number) => {
     calls.push(i);
   }) as typeof virtualizer.scrollToIndex;
-  act(() => result.current.setActiveValue(result.current.itemValue("Item 500", 500)));
+  act(() => result.current.setActiveValue(result.current.itemValue("Item 500")));
   expect(calls).toEqual([]);
 });
 

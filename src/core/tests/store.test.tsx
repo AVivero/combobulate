@@ -57,14 +57,14 @@ test("store: multiple toggles membership", () => {
 
 test("store: itemValue is the id verbatim; activeIndex maps back", () => {
   const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
-  expect(store.itemValue("Madrid", 1)).toBe("Madrid");
+  expect(store.itemValue("Madrid")).toBe("Madrid");
   act(() => store.setActiveValue("Madrid"));
   expect(store.getState().activeIndex).toBe(1);
 });
 
 test("store: onInputKeyDown ArrowDown advances activeIndex via the default requestActive", () => {
   const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
-  act(() => store.setActiveValue(store.itemValue("Paris", 0)));
+  act(() => store.setActiveValue(store.itemValue("Paris")));
   expect(store.getState().activeIndex).toBe(0);
 
   const event = keyEvent("ArrowDown");
@@ -79,7 +79,7 @@ test("store: onInputKeyDown ArrowDown advances activeIndex via the default reque
 
 test("store: onInputKeyDown bare Home/End are NOT owned (caret passthrough)", () => {
   const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
-  act(() => store.setActiveValue(store.itemValue("Madrid", 1)));
+  act(() => store.setActiveValue(store.itemValue("Madrid")));
 
   const home = keyEvent("Home");
   act(() => store.onInputKeyDown(home as never));
@@ -142,7 +142,7 @@ test("store: setOpen fires onOpenChange on a real transition", () => {
 
 test("store: onInputKeyDown Ctrl+End jumps to the last item", () => {
   const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
-  act(() => store.setActiveValue(store.itemValue("Paris", 0)));
+  act(() => store.setActiveValue(store.itemValue("Paris")));
 
   const event = keyEvent("End", { ctrlKey: true });
   act(() => store.onInputKeyDown(event as never));
@@ -150,4 +150,29 @@ test("store: onInputKeyDown Ctrl+End jumps to the last item", () => {
   expect(store.getState().activeIndex).toBe(ITEMS.length - 1);
   expect(event.defaultPrevented).toBe(true);
   expect(event.propagationStopped).toBe(true);
+});
+
+test("without getItemId, fallback ids are stable, unique, and position-independent", () => {
+  const paris = { n: "Paris" };
+  const madrid = { n: "Madrid" };
+  const berlin = { n: "Berlin" };
+  const store = createCombobulateStore({
+    items: [paris, madrid, berlin],
+    getSearchText: (o) => o.n,
+  });
+  const berlinId = store.itemValue(berlin);
+  // Distinct items get distinct ids (a positional fallback collapsed unrelated
+  // items together once the index was gone).
+  expect(store.itemValue(paris)).not.toBe(berlinId);
+  expect(store.itemValue(madrid)).not.toBe(berlinId);
+  // Filtering moves Berlin from position 2 to position 0 in the visible list...
+  act(() => store.setInputValue("berlin"));
+  expect(store.getState().filteredItems).toEqual([berlin]);
+  // ...but its id is unchanged, so a selection made while filtered is still
+  // recognised as Berlin after the filter clears.
+  expect(store.itemValue(berlin)).toBe(berlinId);
+  act(() => store.select(berlin));
+  act(() => store.setInputValue(""));
+  expect(store.getState().selectedItems).toEqual([berlin]);
+  expect(store.isSelected(berlin)).toBe(true);
 });
