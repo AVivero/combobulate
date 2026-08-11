@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { stubElementLayout } from "../test-utils/stub-element-layout";
 import { useCombobulate } from "./use-combobulate";
 
@@ -12,11 +12,14 @@ afterAll(() => restore());
 const BIG = Array.from({ length: 1000 }, (_, i) => `Item ${i}`);
 
 /** Minimal stand-in for the parts of React's KeyboardEvent the handler reads. */
-function keyEvent(key: string) {
+function keyEvent(key: string, mod: Partial<{ ctrlKey: boolean; metaKey: boolean }> = {}) {
   let defaultPrevented = false;
   let propagationStopped = false;
   return {
     key,
+    ctrlKey: false,
+    metaKey: false,
+    ...mod,
     preventDefault: () => {
       defaultPrevented = true;
     },
@@ -34,22 +37,20 @@ function keyEvent(key: string) {
 
 // What THIS layer proves vs the e2e:
 //
-// The real fix for `aria-activedescendant` (a synthetic `pointermove` at the
-// mounted target row, driving cmdk's own selection recompute — see
-// use-combobulate.ts's onInputKeyDown) can only be exercised in a real browser
-// with layout, so it lives in e2e/jump-keys.e2e.ts. These unit tests prove the
-// remaining half: the jump MATH (End→999, Home→0, PageDown→10, PageUp clamp→0)
-// and that `activeValue`/`activeIndex` land on the true target index over the
-// full virtualized list.
+// The jump MATH (End -> 999, Home -> 0, PageDown -> 10, PageUp clamp -> 0,
+// Ctrl/Cmd-only Home/End ownership) is pure and already fully pinned by
+// navigation.test.ts. What's left to prove here is the WIRING: a real
+// keydown on this hook computes the right target via `nextIndex` and asks
+// the virtualizer to scroll there, with preventDefault/stopPropagation set
+// exactly on the keys combobulate owns.
 //
-// In this DOM-less environment there is no scroll container, so the handler's
-// pointer path never fires; it falls through to its state-only commit, which
-// runs on a later frame. `activeIndex` therefore settles asynchronously rather
-// than within the same `act`, so these tests await it via `waitFor`. The
-// asserted indices are unchanged. preventDefault/stopPropagation stay
-// synchronous and are asserted as such.
+// These tests call the hook directly (`renderHook`, no `<Combobulate.List>`
+// rendered), so the virtualizer has no real scroll container and never
+// reports a mounted window. The scroll-then-set bridge's other half — the
+// target row actually mounting and `activeIndex` settling on it — can only
+// be exercised with real layout, in e2e/jump-keys.e2e.ts.
 
-test("End jumps to the true last item of the whole filtered list", async () => {
+test("Ctrl+End targets the true last item of the whole filtered list", () => {
   const { result } = renderHook(() =>
     useCombobulate({ items: BIG, defaultOpen: true, getItemId: (i) => i }),
   );
@@ -58,52 +59,78 @@ test("End jumps to the true last item of the whole filtered list", async () => {
     calls.push(i);
   }) as typeof result.current.virtualizer.scrollToIndex;
 
-  const event = keyEvent("End");
+  const event = keyEvent("End", { ctrlKey: true });
   act(() => result.current.onInputKeyDown(event as never));
 
   expect(calls).toContain(999);
   expect(event.defaultPrevented).toBe(true);
-  // cmdk binds End on the <Command> root; stopping propagation is what keeps
-  // it from also moving the highlight to the last *mounted* row.
+  // combobulate owns Ctrl/Cmd+End; stopping propagation keeps cmdk's own
+  // root-level Home/End handling from also moving the highlight.
   expect(event.propagationStopped).toBe(true);
-
-  await waitFor(() => expect(result.current.activeIndex).toBe(999));
 });
 
-test("Home jumps to the true first item", async () => {
+test("Cmd+Home targets the true first item", () => {
   const { result } = renderHook(() =>
     useCombobulate({ items: BIG, defaultOpen: true, getItemId: (i) => i }),
   );
-  result.current.virtualizer.scrollToIndex =
-    (() => {}) as typeof result.current.virtualizer.scrollToIndex;
+  const calls: number[] = [];
+  result.current.virtualizer.scrollToIndex = ((i: number) => {
+    calls.push(i);
+  }) as typeof result.current.virtualizer.scrollToIndex;
   act(() => result.current.setActiveValue(result.current.itemValue("Item 500", 500)));
-  act(() => result.current.onInputKeyDown(keyEvent("Home") as never));
-  await waitFor(() => expect(result.current.activeIndex).toBe(0));
+
+  const event = keyEvent("Home", { metaKey: true });
+  act(() => result.current.onInputKeyDown(event as never));
+
+  expect(calls).toContain(0);
+  expect(event.defaultPrevented).toBe(true);
 });
 
-test("PageDown/PageUp move by a page and clamp at the ends", async () => {
+test("bare Home/End are NOT owned (caret movement, not a jump)", () => {
   const { result } = renderHook(() =>
     useCombobulate({ items: BIG, defaultOpen: true, getItemId: (i) => i }),
   );
-  result.current.virtualizer.scrollToIndex =
-    (() => {}) as typeof result.current.virtualizer.scrollToIndex;
+  const home = keyEvent("Home");
+  act(() => result.current.onInputKeyDown(home as never));
+  expect(home.defaultPrevented).toBe(false);
 
-  act(() => result.current.setActiveValue(result.current.itemValue("Item 0", 0)));
-  act(() => result.current.onInputKeyDown(keyEvent("PageDown") as never));
-  await waitFor(() => expect(result.current.activeIndex).toBe(10));
-
-  act(() => result.current.onInputKeyDown(keyEvent("PageUp") as never));
-  await waitFor(() => expect(result.current.activeIndex).toBe(0));
-
-  act(() => result.current.onInputKeyDown(keyEvent("PageUp") as never));
-  await waitFor(() => expect(result.current.activeIndex).toBe(0));
+  const end = keyEvent("End");
+  act(() => result.current.onInputKeyDown(end as never));
+  expect(end.defaultPrevented).toBe(false);
 });
 
-test("unhandled keys pass through untouched (cmdk keeps arrow nav)", () => {
+test("PageDown/PageUp move by a page and clamp at the ends", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: BIG, defaultOpen: true, getItemId: (i) => i }),
+  );
+  const calls: number[] = [];
+  result.current.virtualizer.scrollToIndex = ((i: number) => {
+    calls.push(i);
+  }) as typeof result.current.virtualizer.scrollToIndex;
+  act(() => result.current.setActiveValue(result.current.itemValue("Item 0", 0)));
+
+  act(() => result.current.onInputKeyDown(keyEvent("PageDown") as never));
+  expect(calls).toContain(10);
+
+  act(() => result.current.onInputKeyDown(keyEvent("PageUp") as never));
+  expect(calls).toContain(0);
+});
+
+test("ArrowDown/ArrowUp are combobulate-owned, not left to cmdk", () => {
   const { result } = renderHook(() =>
     useCombobulate({ items: BIG, defaultOpen: true, getItemId: (i) => i }),
   );
   const event = keyEvent("ArrowDown");
+  act(() => result.current.onInputKeyDown(event as never));
+  expect(event.defaultPrevented).toBe(true);
+  expect(event.propagationStopped).toBe(true);
+});
+
+test("unhandled (non-nav) keys pass through untouched", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: BIG, defaultOpen: true, getItemId: (i) => i }),
+  );
+  const event = keyEvent("a");
   act(() => result.current.onInputKeyDown(event as never));
   expect(event.defaultPrevented).toBe(false);
   expect(event.propagationStopped).toBe(false);
@@ -111,7 +138,7 @@ test("unhandled keys pass through untouched (cmdk keeps arrow nav)", () => {
 
 test("jump keys are inert on an empty list", () => {
   const { result } = renderHook(() => useCombobulate({ items: [], defaultOpen: true }));
-  const event = keyEvent("End");
+  const event = keyEvent("End", { ctrlKey: true });
   act(() => result.current.onInputKeyDown(event as never));
   expect(event.defaultPrevented).toBe(false);
 });

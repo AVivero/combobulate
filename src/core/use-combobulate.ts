@@ -1,26 +1,20 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { defaultFilterItems, defaultGetSearchText, isSameItem, toChangeValue } from "./item-utils";
+import { PAGE_SIZE, nextIndex } from "./navigation";
 import type { CombobulateApi, UseCombobulateOptions } from "./types";
-
-/** Rows moved per PageUp/PageDown. A fixed page keeps the jump predictable
- *  across variable-height rows, where a measured "viewport of rows" would not. */
-const PAGE_SIZE = 10;
-
-/** Max frames a jump waits for its target row to mount before giving up on the
- *  synthetic-pointer path (see `onInputKeyDown`). A large scroll can take a few
- *  frames to commit the row; a row that never lays out (the unit environment)
- *  falls through to the state-only fallback after this many. */
-const JUMP_MOUNT_FRAMES = 20;
 
 /**
  * Orchestration hook for a cmdk-backed, virtualized combobox.
  *
- * cmdk owns arrow-key navigation, option roles, and the highlighted item
+ * cmdk still supplies option roles and reflects the highlighted item
  * (surfaced here as `activeValue`/`setActiveValue`, wired to `<Command>`'s
- * controlled `value`). This hook owns everything cmdk does not: filtering,
- * selection, input/open state, the virtualizer, and the bridge that keeps the
- * highlighted row mounted so cmdk's `aria-activedescendant` always resolves.
+ * controlled `value`), but combobulate — not cmdk — owns keyboard
+ * navigation: `onInputKeyDown` computes target indices over the FULL
+ * filtered list (see `./navigation`'s `nextIndex`), not just cmdk's mounted
+ * window. This hook owns everything else besides: filtering, selection,
+ * input/open state, the virtualizer, and the scroll-then-set bridge that
+ * mounts a jump's target row before handing cmdk the new highlight.
  */
 export function useCombobulate<T>(options: UseCombobulateOptions<T>): CombobulateApi<T> {
   const {
@@ -190,125 +184,71 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
   const activeIndexRef = useRef(activeIndex);
   activeIndexRef.current = activeIndex;
 
-  // Holds the rAF handle of a pending deferred jump commit (see below), so a
-  // second jump before the frame fires cancels the first instead of letting
-  // two deferred commits race.
-  const pendingJumpRef = useRef<number | null>(null);
+  /**
+   * The scroll-then-set bridge. cmdk (and, once Ariakit lands, Ariakit's
+   * `activeId`) only highlights *mounted* rows, so a jump target outside the
+   * current virtualized window has to be scrolled into mount BEFORE we can
+   * commit it as the active value. Holds the target index between "we asked
+   * the virtualizer to scroll there" and "the row actually mounted" (see the
+   * effect below); `null` when no jump is pending.
+   */
+  const pendingActiveRef = useRef<number | null>(null);
 
-  useEffect(
-    () => () => {
-      if (pendingJumpRef.current !== null) cancelAnimationFrame(pendingJumpRef.current);
-    },
-    [],
-  );
-
-  const onInputKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      const rows = filteredRef.current;
-      if (rows.length === 0) return;
-      const current = activeIndexRef.current;
-      const last = rows.length - 1;
-
-      let target: number | null = null;
-      if (event.key === "Home") target = 0;
-      else if (event.key === "End") target = last;
-      else if (event.key === "PageDown")
-        target = Math.min((current < 0 ? 0 : current) + PAGE_SIZE, last);
-      else if (event.key === "PageUp")
-        target = Math.max((current < 0 ? 0 : current) - PAGE_SIZE, 0);
-      if (target === null) return;
-
-      const item = rows[target];
+  /**
+   * Make `target` (an index into the full filtered list) the active item.
+   * If it's already within the virtualizer's current mounted window, commit
+   * immediately; otherwise scroll it into view and defer the commit to the
+   * mount-resolving effect below, since `scrollToIndex` does not mount the
+   * row synchronously (react-virtual widens its window in response to its
+   * own scroll handling, not inside this call).
+   */
+  const requestActive = useCallback(
+    (target: number) => {
+      const item = filteredRef.current[target];
       if (item === undefined) return;
-
-      // cmdk binds Home/End on the <Command> root and would otherwise move the
-      // highlight to the first/last *mounted* row. Our handler sits on the
-      // input, which fires first, so stopping propagation preempts it.
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (pendingJumpRef.current !== null) {
-        cancelAnimationFrame(pendingJumpRef.current);
-        pendingJumpRef.current = null;
+      const mounted = virtualizer.getVirtualItems().some((row) => row.index === target);
+      if (mounted) {
+        setActiveValue(itemValue(item, target));
+        return;
       }
-
-      const value = itemValue(item, target);
-
-      // Why not just `setActiveValue(value)`? Because cmdk 1.1.1 binds the
-      // input's `aria-activedescendant` solely to its internal `selectedItemId`,
-      // and that is recomputed in exactly ONE place — cmdk's internal
-      // `store.setState("value", …)`, reached only from cmdk's own keyboard
-      // handlers or an item's `onPointerMove`/`onClick`. A change to the
-      // controlled `<Command value>` prop updates which row is `aria-selected`
-      // but never recomputes `selectedItemId`, so a prop-driven jump leaves
-      // `aria-activedescendant` stale/null. (Root-cause detail in
-      // .superpowers/sdd/task-5-report.md, confirmed against
-      // node_modules/cmdk/dist/index.mjs in a real browser.)
-      //
-      // The fix: once the target row is in the DOM, dispatch a synthetic
-      // `pointermove` at its cmdk item so cmdk's OWN `onPointerMove` runs the
-      // internal `setState("value", …)` that recomputes `selectedItemId` and
-      // re-points `aria-activedescendant`. cmdk's `onPointerMove` also fires
-      // `onValueChange`, forwarded by `<Command onValueChange={setActiveValue}>`,
-      // so this updates our `activeValue`/`activeIndex` too.
-      const cell = (i: number) =>
-        scrollRef.current?.querySelector(`[data-index="${i}"] [cmdk-item]`) ?? null;
-
-      const tryDispatch = () => {
-        const node = cell(target);
-        if (!node) return false;
-        // cmdk skips the `selectedItemId` recompute when the new value equals
-        // the current one (`Object.is` guard). After a large scroll, cmdk's
-        // own unmount handling can already have set the value to the target
-        // (it re-selects the first mounted row when the selected row unmounts),
-        // leaving a stale/null `selectedItemId` that a plain dispatch on the
-        // target can't dislodge — confirmed in a real browser. So "wiggle":
-        // dispatch on an adjacent mounted row FIRST (guaranteed a different
-        // value), then on the target, forcing a clean recompute that lands on
-        // the target. The intermediate value change is coalesced by React, so
-        // no intermediate render/scroll is observable.
-        const neighbor = cell(target + 1) ?? cell(target - 1);
-        if (neighbor) neighbor.dispatchEvent(new PointerEvent("pointermove", { bubbles: true }));
-        node.dispatchEvent(new PointerEvent("pointermove", { bubbles: true }));
-        setActiveValue(value);
-        return true;
-      };
-
-      // Scroll now — this mounts the target row. `scrollToIndex` over a large
-      // distance can take more than one frame to commit the destination row,
-      // and dispatching into a not-yet-mounted row silently no-ops, so poll
-      // across frames until it mounts. Bounded so a row that never lays out
-      // (the unit environment, which has no scroll container) falls through to
-      // a state-only commit rather than looping forever.
-      let attempt = 0;
-      const commit = () => {
-        virtualizer.scrollToIndex(target, { align: "center" });
-        // Force a synchronous range recompute: the virtualizer only re-renders
-        // its mounted window in response to a scroll EVENT, which the browser
-        // fires asynchronously after `scrollToIndex` sets `scrollTop`. We
-        // dispatch one synchronously so the virtualizer's own scroll handler
-        // runs now (it commits the new range via `flushSync`), mounting the
-        // target row within this call — so the pointer dispatch below can land
-        // before the handler returns, beating the e2e's immediate aria read.
-        scrollRef.current?.dispatchEvent(new Event("scroll"));
-        if (tryDispatch()) {
-          pendingJumpRef.current = null;
-          return;
-        }
-        attempt += 1;
-        if (attempt > JUMP_MOUNT_FRAMES) {
-          // Never laid out (the unit environment) — commit our own state so
-          // `activeValue`/`activeIndex` still reflect the jump;
-          // `aria-activedescendant` is then the e2e's concern.
-          setActiveValue(value);
-          pendingJumpRef.current = null;
-          return;
-        }
-        pendingJumpRef.current = requestAnimationFrame(commit);
-      };
-      commit();
+      virtualizer.scrollToIndex(target);
+      pendingActiveRef.current = target;
     },
     [virtualizer, itemValue],
+  );
+
+  // Resolves a pending jump once its target row mounts. Re-checked whenever
+  // the mounted window changes; a no-op whenever nothing is pending.
+  const virtualItems = virtualizer.getVirtualItems();
+  useEffect(() => {
+    const target = pendingActiveRef.current;
+    if (target === null) return;
+    if (!virtualItems.some((row) => row.index === target)) return;
+    const item = filteredRef.current[target];
+    if (item === undefined) return;
+    setActiveValue(itemValue(item, target));
+    pendingActiveRef.current = null;
+  }, [virtualItems, itemValue]);
+
+  /**
+   * combobulate — not cmdk — owns keyboard navigation, computing target
+   * indices over the FULL filtered list (see `./navigation`'s `nextIndex`),
+   * not just cmdk's mounted window. A `null` target means the key isn't
+   * ours (e.g. bare Home/End move the caret); we return without touching
+   * the event, leaving it to cmdk/the browser.
+   */
+  const onInputKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      const target = nextIndex(activeIndexRef.current, event, {
+        count: filteredRef.current.length,
+        page: PAGE_SIZE,
+      });
+      if (target === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      requestActive(target);
+    },
+    [requestActive],
   );
 
   // Closed is checked first: a closed combobox announces nothing, even while

@@ -16,6 +16,7 @@ import {
 import { subscribe } from "@ariakit/store";
 import { type KeyboardEvent, useSyncExternalStore } from "react";
 import { defaultFilterItems, defaultGetSearchText, isSameItem, toChangeValue } from "./item-utils";
+import { PAGE_SIZE, nextIndex } from "./navigation";
 import type { CombobulateState, CombobulateStore, UseCombobulateOptions } from "./types";
 
 /**
@@ -45,6 +46,18 @@ export type CombobulateStoreInternal<T> = CombobulateStore<T> & {
      * can call it too. No-op when the committed-value model isn't active.
      */
     commitOrRevert: () => void;
+    /**
+     * The scroll-then-set bridge target of `onInputKeyDown`'s navigation math
+     * (see `./navigation`'s `nextIndex`): make `target` (an index into
+     * `filteredItems`) the active item. The default here is a safe, immediate
+     * `setActiveId` — correct whenever `target` is already mounted (or there
+     * is no virtualized window at all, e.g. this store used headless in a
+     * test). A later task's hook overwrites this field with the real bridge:
+     * scroll unmounted targets into view first, deferring the `setActiveId`
+     * until the target's row actually mounts. Mutable (not readonly) so that
+     * override can happen after the store is created.
+     */
+    requestActive: (target: number) => void;
   };
 };
 
@@ -274,8 +287,45 @@ export function createCombobulateStore<T>(
   const isSelected = (item: T): boolean =>
     toValueArray(combobox.getState().selectedValue).includes(valueOfItem(item));
 
-  // Stub: Task 3 implements the virtualization-aware jump keys.
-  const onInputKeyDown = (_event: KeyboardEvent<HTMLInputElement>): void => {};
+  /**
+   * `_internal` is built as a standalone, mutable object (not inlined into
+   * the return statement) so `requestActive` can be overwritten in place —
+   * `onInputKeyDown` below closes over this exact object and always reads
+   * its CURRENT `requestActive`, so a later override (the hook's real
+   * scroll-then-set bridge) takes effect without re-creating the store.
+   */
+  const internal: CombobulateStoreInternal<T>["_internal"] = {
+    combobox,
+    config: { items, getItemId, getSearchText, filterItems, itemToInputValue, multiple, loading },
+    commitOrRevert,
+    // Safe default: jump straight to `target`, no virtualized window to wait
+    // on. Correct standalone (this store used headlessly, e.g. in tests) and
+    // whenever `target` is already mounted.
+    requestActive: (target: number): void => {
+      const item = filteredItems()[target];
+      if (item === undefined) return;
+      combobox.setState("activeId", itemValue(item, target));
+    },
+  };
+
+  /**
+   * combobulate owns ALL keyboard navigation over the full filtered list
+   * (not just Ariakit's mounted/virtualized window) — see `./navigation`'s
+   * `nextIndex` for the exact key ownership. A `null` target means the key
+   * isn't ours (e.g. bare Home/End move the caret); we return without
+   * touching the event, letting the browser/Ariakit handle it.
+   */
+  const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+    const state = getState();
+    const target = nextIndex(state.activeIndex, event, {
+      count: state.filteredItems.length,
+      page: PAGE_SIZE,
+    });
+    if (target === null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    internal.requestActive(target);
+  };
 
   return {
     useState,
@@ -287,10 +337,6 @@ export function createCombobulateStore<T>(
     isSelected,
     itemValue,
     onInputKeyDown,
-    _internal: {
-      combobox,
-      config: { items, getItemId, getSearchText, filterItems, itemToInputValue, multiple, loading },
-      commitOrRevert,
-    },
+    _internal: internal,
   };
 }
