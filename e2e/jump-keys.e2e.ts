@@ -1,6 +1,6 @@
 import { type Page, expect, test } from "@playwright/test";
 
-const STORY = "/iframe.html?id=combobulate-single-select--default&viewMode=story";
+const STORY = "/#/single-uncontrolled";
 
 // Home/End are caret keys now; the jump is on the MODIFIER form (Ctrl/Cmd+End),
 // which combobulate owns and drives Ariakit's activeId over the FULL list.

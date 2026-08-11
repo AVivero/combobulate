@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-const SINGLE = "/iframe.html?id=combobulate-single-select--default&viewMode=story";
-const MULTI = "/iframe.html?id=combobulate-multi-select--default&viewMode=story";
+const SINGLE = "/#/single-uncontrolled";
+const MULTI = "/#/multi-uncontrolled";
 
 // Single-select: picking an option should reflect the selection by filling the
 // input with the chosen label (as a normal combobox does), not leave it blank.

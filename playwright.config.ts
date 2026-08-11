@@ -8,12 +8,12 @@ export default defineConfig({
   // trace captured on the first retry makes any real failure debuggable.
   retries: 2,
   webServer: {
-    command: "bun run storybook",
-    url: "http://localhost:6006",
+    command: "bun run dev",
+    url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
-  use: { baseURL: "http://localhost:6006", trace: "on-first-retry" },
+  use: { baseURL: "http://localhost:5173", trace: "on-first-retry" },
   // Run the suite on two independent engines so the Ariakit bridge is validated
   // beyond a single browser's quirks.
   projects: [

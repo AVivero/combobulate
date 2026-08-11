@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 // The demos float by default, so any of them exercises the floating layer.
-const STORY = "/iframe.html?id=combobulate-single-select--default&viewMode=story";
+const STORY = "/#/single-uncontrolled";
 
 test("opens on focus and dismisses on outside click", async ({ page }) => {
   await page.goto(STORY);
