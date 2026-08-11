@@ -24,7 +24,11 @@ First tagged release.
 - Callable root `<Combobulate store={store}>` with `.Input/.List/.Item/.Empty/`
   `.LiveRegion/.Popover`.
 - `useCombobulateFloating(store, { closeOnSelect })` for the floating dropdown.
-- Opt-in committed-value model via `itemToInputValue` (fill-on-select, filter
+- Per-item accessors share one `get*` convention: `getItemId` (identity),
+  `getSearchText` (text the default filter searches), and `getInputValue` (the
+  committed single-select label). `getInputValue` was renamed from
+  `itemToInputValue` for naming consistency.
+- Opt-in committed-value model via `getInputValue` (fill-on-select, filter
   bypass while showing a selection, revert-on-close, clear-to-unselect).
 
 ### Accessibility
