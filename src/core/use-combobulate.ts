@@ -1,5 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createCombobulateStore } from "./store";
 import type { CombobulateStore, UseCombobulateOptions } from "./types";
 
@@ -21,10 +21,12 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
     loading = false,
     estimateSize = () => 32,
     overscan = 8,
+    value,
     onChange,
     onInputChange,
     onOpenChange,
   } = options;
+  const controlled = value !== undefined;
 
   /**
    * Consumer callbacks read through a ref so the store — created once — always
@@ -45,6 +47,10 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
       onOpenChange: (open) => callbacksRef.current.onOpenChange?.(open),
     }),
   );
+
+  // Read by the store's selection mutators; must be current before any event
+  // handler fires, so set it during render (like scrollRef/virtualizer below).
+  store._internal.setControlled(controlled);
 
   const scrollRef = useRef<HTMLElement | null>(null);
   const filteredItems = store.useState("filteredItems");
@@ -128,6 +134,35 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
   useEffect(() => {
     store._internal.setLoading(loading);
   }, [loading, store]);
+
+  /**
+   * Controlled sync, library-owned: reflect the `value` prop into the engine's
+   * selection. A layout effect (pre-paint) so an accepted pick has no flicker.
+   * `setSelectedValue` no-ops when unchanged, so a fresh-but-equal `value` array
+   * each render is inert. This is the ONLY writer of selection in controlled
+   * mode (the mutators skip it), so selection never drifts from the prop.
+   */
+  useLayoutEffect(() => {
+    if (!controlled) return;
+    const list = value == null ? [] : Array.isArray(value) ? value : [value];
+    store._internal.setSelectedValue(list.map((item) => store.itemValue(item)));
+  }, [value, controlled, store]);
+
+  const wasControlledRef = useRef(controlled);
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    if (controlled && options.defaultValue != null) {
+      console.warn(
+        "combobulate: pass either `value` (controlled) or `defaultValue` (uncontrolled), not both — `value` wins.",
+      );
+    }
+    if (wasControlledRef.current !== controlled) {
+      console.warn(
+        "combobulate: switching between controlled and uncontrolled selection is not supported.",
+      );
+    }
+    wasControlledRef.current = controlled;
+  }, [controlled, options.defaultValue]);
 
   return store;
 }
