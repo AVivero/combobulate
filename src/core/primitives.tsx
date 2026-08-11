@@ -1,7 +1,9 @@
-import { Command } from "cmdk";
-import { type ReactNode, forwardRef, useEffect, useState } from "react";
+import * as Ariakit from "@ariakit/react";
+import { type ReactNode, createContext, forwardRef, useContext, useEffect, useState } from "react";
 import { CombobulateProvider, useCombobulateContext } from "./context";
-import type { CombobulateApi } from "./types";
+import { isSameItem } from "./item-utils";
+import type { CombobulateStoreInternal } from "./store";
+import type { CombobulateStore } from "./types";
 
 /**
  * Compose two optional event handlers into one that calls `own` first, then the
@@ -22,57 +24,76 @@ function compose<A extends unknown[]>(
   };
 }
 
-/** Props for {@link Combobulate}'s `Root` component. */
+/**
+ * Carries the root's `label` down to `Input` as a fallback accessible name for
+ * the combobox (a consumer's own `aria-label` on `Input` wins). Kept separate
+ * from the store context — it's a presentational concern, not store state.
+ */
+const LabelContext = createContext<string | undefined>(undefined);
+
+/** Props for the {@link Combobulate} root component. */
 export type CombobulateRootProps<T> = {
-  /** The value returned by `useCombobulate`. */
-  api: CombobulateApi<T>;
-  /** Accessible label for the command surface. */
+  /** The store handle returned by `useCombobulate`. */
+  store: CombobulateStore<T>;
+  /** Accessible label for the combobox (fallback when `Input` has no `aria-label`). */
   label?: string;
   children: ReactNode;
 };
 
 /**
- * Root provider. Renders cmdk's `<Command>` with filtering disabled (we filter
- * in `useCombobulate`) and its highlight controlled by the api, which is what
- * lets the virtualization bridge observe and drive the active row.
+ * Root provider. Renders Ariakit's `<ComboboxProvider>` bound to the store's
+ * internal combobox store — so Ariakit owns option roles, `aria-expanded`, and
+ * `aria-activedescendant` — plus combobulate's own context carrying the store
+ * handle to the primitives below.
  */
-function Root<T>({ api, label, children }: CombobulateRootProps<T>) {
+function CombobulateRoot<T>({ store, label, children }: CombobulateRootProps<T>) {
+  // The runtime handle is always the internal variant (the public type just
+  // hides `_internal`); narrow once here to reach the Ariakit store + injections.
+  const internal = store as CombobulateStoreInternal<T>;
   return (
-    <CombobulateProvider value={api}>
-      <Command
-        shouldFilter={false}
-        label={label}
-        value={api.activeValue}
-        onValueChange={api.setActiveValue}
-      >
-        {children}
-      </Command>
-    </CombobulateProvider>
+    <Ariakit.ComboboxProvider store={internal._internal.combobox}>
+      <LabelContext.Provider value={label}>
+        <CombobulateProvider value={internal}>{children}</CombobulateProvider>
+      </LabelContext.Provider>
+    </Ariakit.ComboboxProvider>
   );
 }
 
 /**
- * The combobox text input. cmdk supplies `role="combobox"` and owns
- * `aria-activedescendant`.
+ * The combobox text input. Ariakit supplies `role="combobox"`, owns
+ * `aria-expanded` (now correct — cmdk hardcoded it true) and
+ * `aria-activedescendant`, and reads the input value from the store.
  *
- * Handlers from the api and any same-named handler in `props` are composed
- * (ours first, then the consumer's) rather than one clobbering the other —
- * this is what lets the floating layer's Escape-to-dismiss `onKeyDown` sit
- * alongside the jump-key interceptor when consumers spread
- * `{...floating.referenceProps}` here.
+ * Navigation (`store.onInputKeyDown`) runs in the CAPTURE phase
+ * (`onKeyDownCapture`), not the bubble `onKeyDown`. In the aria-activedescendant
+ * pattern Ariakit's composite installs a capture-phase key proxy that
+ * re-dispatches arrow/page/home/end to the active item — moving Ariakit's own
+ * `activeId` by one BEFORE a bubble handler ever runs. If combobulate navigated
+ * in bubble, it would read that already-moved state and step again: every
+ * ArrowDown would jump two rows. Ariakit's proxy calls our capture handler first
+ * and bails on `defaultPrevented`, so intercepting an owned key here (we
+ * `preventDefault` + `stopPropagation` on exactly the keys `nextIndex` claims)
+ * makes combobulate the SOLE mover; unowned keys (Escape, printables) fall
+ * through untouched.
+ *
+ * Handlers from combobulate and any same-named handler in `props` are composed
+ * (ours first, then the consumer's) rather than one clobbering the other — this
+ * is what lets the floating layer's Escape-to-dismiss `onKeyDown` sit alongside
+ * combobulate's navigation when consumers spread `{...floating.referenceProps}`.
  */
 const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function Input(props, ref) {
-    const api = useCombobulateContext();
+    const store = useCombobulateContext();
+    const label = useContext(LabelContext);
     return (
-      <Command.Input
+      <Ariakit.Combobox
         {...props}
         ref={ref}
-        // `value` after the spread: the hook owns the input text, so a stray
-        // consumer `value` prop can't silently decouple it.
-        value={api.inputValue}
+        // Consumer's explicit `aria-label` wins; otherwise fall back to the
+        // root `label`. Placed after the spread so the fallback can't shadow it.
+        aria-label={props["aria-label"] ?? label}
         onFocus={compose<[React.FocusEvent<HTMLInputElement>]>(
-          () => api.setOpen(true),
+          () => store.setOpen(true),
           props.onFocus,
         )}
         onBlur={compose<[React.FocusEvent<HTMLInputElement>]>(
@@ -85,18 +106,18 @@ const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputEl
            * layer's outside-press dismiss so an in-list click doesn't close.
            */
           (event) => {
-            if (event.relatedTarget) api.setOpen(false);
+            if (event.relatedTarget) store.setOpen(false);
           },
           props.onBlur,
         )}
-        onKeyDown={compose<[React.KeyboardEvent<HTMLInputElement>]>(
-          api.onInputKeyDown,
-          props.onKeyDown,
+        onKeyDownCapture={compose<[React.KeyboardEvent<HTMLInputElement>]>(
+          store.onInputKeyDown,
+          props.onKeyDownCapture,
         )}
-        onValueChange={(value: string) => {
-          api.setInputValue(value);
-          if (!api.isOpen) api.setOpen(true);
-        }}
+        onChange={compose<[React.ChangeEvent<HTMLInputElement>]>((event) => {
+          store.setInputValue(event.target.value);
+          if (!store.getState().isOpen) store.setOpen(true);
+        }, props.onChange)}
       />
     );
   },
@@ -111,28 +132,33 @@ export type CombobulateListProps<T> = {
 };
 
 /**
- * Virtualized scroll container. cmdk's `Command.List` supplies the listbox
+ * Virtualized scroll container. Ariakit's `<ComboboxList>` supplies the listbox
  * role; the inner scroll element is ours so TanStack Virtual can measure it.
+ * The virtualizer and scroll ref ride on the store internals (injected by the
+ * hook), so this reads everything from the store handle alone.
  */
 function List<T>({ children, maxHeight = 300 }: CombobulateListProps<T>) {
-  const api = useCombobulateContext<T>();
-  if (!api.isOpen) return null;
-  const rows = api.virtualizer.getVirtualItems();
+  const store = useCombobulateContext<T>();
+  const isOpen = store.useState("isOpen");
+  const filteredItems = store.useState("filteredItems");
+  const { virtualizer, scrollRef } = store._internal;
+  if (!isOpen || virtualizer === null) return null;
+  const rows = virtualizer.getVirtualItems();
   return (
-    <Command.List>
+    <Ariakit.ComboboxList>
       <div
-        ref={api.scrollRef as React.Ref<HTMLDivElement>}
+        ref={scrollRef as React.Ref<HTMLDivElement>}
         style={{ overflow: "auto", position: "relative", maxHeight }}
       >
-        <div style={{ height: api.virtualizer.getTotalSize(), position: "relative" }}>
+        <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
           {rows.map((row) => {
-            const item = api.filteredItems[row.index];
+            const item = filteredItems[row.index];
             if (item === undefined) return null;
             return (
               <div
                 key={row.key}
                 data-index={row.index}
-                ref={api.virtualizer.measureElement}
+                ref={virtualizer.measureElement}
                 style={{
                   position: "absolute",
                   top: 0,
@@ -147,7 +173,7 @@ function List<T>({ children, maxHeight = 300 }: CombobulateListProps<T>) {
           })}
         </div>
       </div>
-    </Command.List>
+    </Ariakit.ComboboxList>
   );
 }
 
@@ -161,27 +187,42 @@ export type CombobulateItemProps<T> = {
 /**
  * A single option row.
  *
- * cmdk owns `role="option"` and `aria-selected` (which, in its model, marks the
- * *highlighted* row). We add what cmdk structurally cannot know: `aria-setsize`
- * and `aria-posinset` across the **whole filtered list**, not just the mounted
- * window — the reason this library exists. For multi-select we additionally
- * express *chosen* state as `aria-checked` (valid on `role="option"`) so it
- * stays distinct from cmdk's highlight.
+ * Ariakit supplies `role="option"` and drives the active highlight through
+ * `aria-activedescendant` (not per-item `aria-selected`), so we own the
+ * accessibility state Ariakit leaves to us: `aria-setsize`/`aria-posinset`
+ * across the **whole filtered list** (not just the mounted window — the reason
+ * this library exists), and `aria-selected` marking the **chosen** value
+ * (single *and* multi), distinct from the highlight. For multi-select we also
+ * express chosen state as `aria-checked`. Ariakit's own click side effects
+ * (set input value / set selection / hide) are disabled — combobulate owns
+ * selection and open state via `store.select`.
  */
 function Item<T>({ item, index, children }: CombobulateItemProps<T>) {
-  const api = useCombobulateContext<T>();
-  const chosen = api.isSelected(item);
+  const store = useCombobulateContext<T>();
+  const multiple = store.useState("multiple");
+  // Read selection reactively so chosen state stays live, and compute `chosen`
+  // through the store's own identity accessor.
+  const selectedItems = store.useState("selectedItems");
+  const chosen = selectedItems.some((selected) =>
+    isSameItem(selected, item, store._internal.config.getItemId),
+  );
+  const value = store.itemValue(item, index);
   return (
-    <Command.Item
-      value={api.itemValue(item, index)}
-      onSelect={() => api.select(item)}
-      aria-setsize={api.filteredItems.length}
+    <Ariakit.ComboboxItem
+      id={value}
+      value={value}
+      setValueOnClick={false}
+      selectValueOnClick={false}
+      hideOnClick={false}
+      onClick={() => store.select(item)}
+      aria-setsize={store.useState("filteredItems").length}
       aria-posinset={index + 1}
-      aria-checked={api.multiple ? chosen : undefined}
+      aria-selected={chosen ? true : undefined}
+      aria-checked={multiple ? chosen : undefined}
       data-chosen={chosen ? "" : undefined}
     >
       {children}
-    </Command.Item>
+    </Ariakit.ComboboxItem>
   );
 }
 
@@ -193,8 +234,10 @@ function Item<T>({ item, index, children }: CombobulateItemProps<T>) {
  * clean, since Biome's `useSemanticElements` only fires when a `role` is set.
  */
 function Empty({ children }: { children: ReactNode }) {
-  const api = useCombobulateContext();
-  if (!api.isOpen || api.filteredItems.length > 0) return null;
+  const store = useCombobulateContext();
+  const isOpen = store.useState("isOpen");
+  const filteredItems = store.useState("filteredItems");
+  if (!isOpen || filteredItems.length > 0) return null;
   return <div>{children}</div>;
 }
 
@@ -213,16 +256,28 @@ const ANNOUNCE_DEBOUNCE_MS = 200;
  * clearing (on close) is immediate, and the current value shows on mount.
  */
 function LiveRegion() {
-  const api = useCombobulateContext();
-  const [message, setMessage] = useState(api.announcement);
+  const store = useCombobulateContext();
+  const isOpen = store.useState("isOpen");
+  const loading = store.useState("loading");
+  const filteredItems = store.useState("filteredItems");
+  // Closed is checked first: a closed combobox announces nothing, even while
+  // `loading` — its live region is not on screen to narrate.
+  const announcement = !isOpen
+    ? ""
+    : loading
+      ? "Loading…"
+      : filteredItems.length === 0
+        ? "No results"
+        : `${filteredItems.length} result${filteredItems.length === 1 ? "" : "s"}`;
+  const [message, setMessage] = useState(announcement);
   useEffect(() => {
-    if (api.announcement === "") {
+    if (announcement === "") {
       setMessage("");
       return;
     }
-    const id = setTimeout(() => setMessage(api.announcement), ANNOUNCE_DEBOUNCE_MS);
+    const id = setTimeout(() => setMessage(announcement), ANNOUNCE_DEBOUNCE_MS);
     return () => clearTimeout(id);
-  }, [api.announcement]);
+  }, [announcement]);
   return (
     // `<output>` carries an implicit `role="status"` (see `Empty` above),
     // satisfying Biome's `useSemanticElements` rule.
@@ -246,5 +301,17 @@ function LiveRegion() {
   );
 }
 
-/** Headless Combobulate primitives. */
-export const Combobulate = { Root, Input, List, Item, Empty, LiveRegion };
+/**
+ * Headless Combobulate primitives. The default export is the callable root
+ * (`<Combobulate store={store}>`); the sub-components are attached as
+ * properties. The positioning `Popover` lives in the floating layer and is
+ * merged onto this object by the package barrel (the lego rule keeps core free
+ * of positioning concerns).
+ */
+export const Combobulate = Object.assign(CombobulateRoot, {
+  Input,
+  List,
+  Item,
+  Empty,
+  LiveRegion,
+});

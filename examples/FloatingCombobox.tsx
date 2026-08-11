@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes, ReactNode } from "react";
-import { Combobulate, type CombobulateApi, useCombobulateFloating } from "../src/index";
+import { Combobulate, type CombobulateStore, useCombobulateFloating } from "../src/index";
 
 /**
  * The demos' shared floating shell — the pattern real-world comboboxes use, and
@@ -10,7 +10,7 @@ import { Combobulate, type CombobulateApi, useCombobulateFloating } from "../src
  * `inputProps` you spread here. Not a library export — just demo glue.
  */
 export function FloatingCombobox<T>({
-  api,
+  store,
   label,
   placeholder,
   inputProps,
@@ -18,7 +18,7 @@ export function FloatingCombobox<T>({
   emptyMessage,
   maxHeight,
 }: {
-  api: CombobulateApi<T>;
+  store: CombobulateStore<T>;
   label: string;
   placeholder?: string;
   inputProps?: InputHTMLAttributes<HTMLInputElement>;
@@ -26,9 +26,10 @@ export function FloatingCombobox<T>({
   emptyMessage?: ReactNode;
   maxHeight?: number;
 }) {
-  const floating = useCombobulateFloating(api, { closeOnSelect: !api.multiple });
+  const multiple = store.useState("multiple");
+  const floating = useCombobulateFloating(store, { closeOnSelect: !multiple });
   return (
-    <Combobulate.Root api={api} label={label}>
+    <Combobulate store={store} label={label}>
       <Combobulate.Input
         ref={floating.reference}
         {...floating.referenceProps}
@@ -45,6 +46,6 @@ export function FloatingCombobox<T>({
         </div>
       </Combobulate.Popover>
       <Combobulate.LiveRegion />
-    </Combobulate.Root>
+    </Combobulate>
   );
 }

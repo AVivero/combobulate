@@ -2,7 +2,18 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
 import { StrictMode } from "react";
 import { stubElementLayout } from "../test-utils/stub-element-layout";
+import type { CombobulateStoreInternal } from "./store";
 import { useCombobulate } from "./use-combobulate";
+
+/**
+ * Hook-level tests. `useCombobulate` returns the store handle, so state is read
+ * through `result.current.getState()` and driven through the store's imperative
+ * methods. The pure store logic is also covered headlessly in `store.test.tsx`/
+ * `committed-value.test.tsx`; these verify the hook wires it up correctly
+ * (wrapped callbacks, the virtualizer, items/loading sync). The bridge's
+ * "scroll an unmounted target into view, then highlight" half needs a real
+ * scroll container, so highlight-on-open lands in `primitives.test.tsx`.
+ */
 
 let restore: () => void;
 beforeAll(() => {
@@ -15,7 +26,7 @@ const ITEMS = ["Paris", "Madrid", "Berlin", "Málaga"];
 test("filters with the normalized default filter", () => {
   const { result } = renderHook(() => useCombobulate({ items: ITEMS }));
   act(() => result.current.setInputValue("mala"));
-  expect(result.current.filteredItems).toEqual(["Málaga"]);
+  expect(result.current.getState().filteredItems).toEqual(["Málaga"]);
 });
 
 test("a custom filterItems overrides the default", () => {
@@ -23,7 +34,7 @@ test("a custom filterItems overrides the default", () => {
     useCombobulate({ items: ITEMS, filterItems: (items) => items.slice(0, 1) }),
   );
   act(() => result.current.setInputValue("zzz"));
-  expect(result.current.filteredItems).toEqual(["Paris"]);
+  expect(result.current.getState().filteredItems).toEqual(["Paris"]);
 });
 
 test("single select replaces and reports the item", () => {
@@ -33,7 +44,7 @@ test("single select replaces and reports the item", () => {
   );
   act(() => result.current.select("Paris"));
   act(() => result.current.select("Berlin"));
-  expect(result.current.selectedItems).toEqual(["Berlin"]);
+  expect(result.current.getState().selectedItems).toEqual(["Berlin"]);
   expect(seen).toEqual(["Paris", "Berlin"]);
 });
 
@@ -51,78 +62,84 @@ test("multi select toggles membership", () => {
   const { result } = renderHook(() => useCombobulate({ items: ITEMS, multiple: true }));
   act(() => result.current.select("Paris"));
   act(() => result.current.select("Berlin"));
-  expect(result.current.selectedItems).toEqual(["Paris", "Berlin"]);
+  expect(result.current.getState().selectedItems).toEqual(["Paris", "Berlin"]);
   act(() => result.current.select("Paris"));
-  expect(result.current.selectedItems).toEqual(["Berlin"]);
+  expect(result.current.getState().selectedItems).toEqual(["Berlin"]);
   expect(result.current.isSelected("Berlin")).toBe(true);
 });
 
 test("itemValue is the id verbatim and maps back to the filtered index", () => {
   const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
   const value = result.current.itemValue("Madrid", 1);
-  // Verbatim — not case-folded. cmdk round-trips it unchanged.
+  // Verbatim — not case-folded. It doubles as the Ariakit option id.
   expect(value).toBe("Madrid");
   act(() => result.current.setActiveValue(value));
-  expect(result.current.activeIndex).toBe(1);
+  expect(result.current.getState().activeIndex).toBe(1);
 });
 
 test("ids differing only in case are distinct items, not a collision", () => {
   const { result } = renderHook(() => useCombobulate({ items: ["AB", "ab"], getItemId: (c) => c }));
   act(() => result.current.setActiveValue(result.current.itemValue("ab", 1)));
-  expect(result.current.activeIndex).toBe(1);
+  expect(result.current.getState().activeIndex).toBe(1);
   act(() => result.current.setActiveValue(result.current.itemValue("AB", 0)));
-  expect(result.current.activeIndex).toBe(0);
+  expect(result.current.getState().activeIndex).toBe(0);
 });
 
 test("activeIndex is -1 when the active value is not in the filtered list", () => {
   const { result } = renderHook(() => useCombobulate({ items: ITEMS }));
   act(() => result.current.setActiveValue("nope"));
-  expect(result.current.activeIndex).toBe(-1);
+  expect(result.current.getState().activeIndex).toBe(-1);
 });
 
-test("bridge: changing the active value scrolls that index into mount", () => {
+test("keep-visible: changing the active value scrolls that index into view", () => {
   const big = Array.from({ length: 1000 }, (_, i) => `Item ${i}`);
   const { result } = renderHook(() => useCombobulate({ items: big, defaultOpen: true }));
+  const internal = result.current as CombobulateStoreInternal<string>;
+  const virtualizer = internal._internal.virtualizer;
+  if (!virtualizer) throw new Error("virtualizer not injected");
 
   const calls: number[] = [];
-  result.current.virtualizer.scrollToIndex = ((i: number) => {
+  virtualizer.scrollToIndex = ((i: number) => {
     calls.push(i);
-  }) as typeof result.current.virtualizer.scrollToIndex;
+  }) as typeof virtualizer.scrollToIndex;
 
   act(() => result.current.setActiveValue(result.current.itemValue("Item 500", 500)));
   expect(calls).toContain(500);
 });
 
-test("bridge stays quiet while closed", () => {
+test("keep-visible stays quiet while closed", () => {
   const big = Array.from({ length: 1000 }, (_, i) => `Item ${i}`);
   const { result } = renderHook(() => useCombobulate({ items: big }));
+  const internal = result.current as CombobulateStoreInternal<string>;
+  const virtualizer = internal._internal.virtualizer;
+  if (!virtualizer) throw new Error("virtualizer not injected");
+
   const calls: number[] = [];
-  result.current.virtualizer.scrollToIndex = ((i: number) => {
+  virtualizer.scrollToIndex = ((i: number) => {
     calls.push(i);
-  }) as typeof result.current.virtualizer.scrollToIndex;
+  }) as typeof virtualizer.scrollToIndex;
   act(() => result.current.setActiveValue(result.current.itemValue("Item 500", 500)));
   expect(calls).toEqual([]);
 });
 
-test("announcement reflects loading, empty, and counts", () => {
+test("syncs changed items into the store", () => {
   const { result, rerender } = renderHook(
-    ({ loading }: { loading: boolean }) =>
-      useCombobulate({ items: ITEMS, defaultOpen: true, loading }),
-    { initialProps: { loading: true } },
+    ({ items }: { items: string[] }) => useCombobulate({ items, defaultOpen: true }),
+    { initialProps: { items: ITEMS } },
   );
-  expect(result.current.announcement).toBe("Loading…");
-  rerender({ loading: false });
-  act(() => result.current.setInputValue("zzz"));
-  expect(result.current.announcement).toBe("No results");
-  act(() => result.current.setInputValue("par"));
-  expect(result.current.announcement).toBe("1 result");
+  expect(result.current.getState().filteredItems).toEqual(ITEMS);
+  rerender({ items: ["Xanadu"] });
+  expect(result.current.getState().filteredItems).toEqual(["Xanadu"]);
 });
 
-test("announcement is silent when closed, even while loading", () => {
-  const { result } = renderHook(() =>
-    useCombobulate({ items: ITEMS, defaultOpen: false, loading: true }),
+test("syncs changed loading into the store", () => {
+  const { result, rerender } = renderHook(
+    ({ loading }: { loading: boolean }) => useCombobulate({ items: ITEMS, loading }),
+    { initialProps: { loading: false } },
   );
-  expect(result.current.announcement).toBe("");
+  expect(result.current.getState().loading).toBe(false);
+  rerender({ loading: true });
+  expect(result.current.getState().loading).toBe(true);
 });
 
 test("itemToInputValue: selecting fills the input with the item's label", () => {
@@ -130,7 +147,7 @@ test("itemToInputValue: selecting fills the input with the item's label", () => 
     useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
   );
   act(() => result.current.select("Madrid"));
-  expect(result.current.inputValue).toBe("Madrid");
+  expect(result.current.getState().inputValue).toBe("Madrid");
 });
 
 test("itemToInputValue: fill does NOT fire onInputChange (typing does)", () => {
@@ -155,7 +172,7 @@ test("itemToInputValue: while showing a selection, the full list is shown", () =
   );
   act(() => result.current.select("Madrid")); // inputValue -> "Madrid" (a committed label)
   // "Madrid" would substring-filter to just Madrid, but showing-a-selection bypasses:
-  expect(result.current.filteredItems).toEqual(ITEMS);
+  expect(result.current.getState().filteredItems).toEqual(ITEMS);
 });
 
 test("itemToInputValue: typing after a pick filters normally (dirty)", () => {
@@ -164,7 +181,7 @@ test("itemToInputValue: typing after a pick filters normally (dirty)", () => {
   );
   act(() => result.current.select("Madrid"));
   act(() => result.current.setInputValue("ber")); // now a search, not the committed label
-  expect(result.current.filteredItems).toEqual(["Berlin"]);
+  expect(result.current.getState().filteredItems).toEqual(["Berlin"]);
 });
 
 test("itemToInputValue is ignored in multi-select", () => {
@@ -177,14 +194,14 @@ test("itemToInputValue is ignored in multi-select", () => {
     }),
   );
   act(() => result.current.select("Madrid"));
-  expect(result.current.inputValue).toBe(""); // no fill; input stays a search box
-  expect(result.current.filteredItems).toEqual(ITEMS);
+  expect(result.current.getState().inputValue).toBe(""); // no fill; input stays a search box
+  expect(result.current.getState().filteredItems).toEqual(ITEMS);
 });
 
 test("without itemToInputValue, selecting does not touch the input (regression guard)", () => {
   const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
   act(() => result.current.select("Madrid"));
-  expect(result.current.inputValue).toBe("");
+  expect(result.current.getState().inputValue).toBe("");
 });
 
 test("revert-on-close: a dirty search reverts to the committed selection without firing onInputChange", () => {
@@ -201,7 +218,7 @@ test("revert-on-close: a dirty search reverts to the committed selection without
   act(() => result.current.select("Madrid")); // programmatic fill — no onInputChange
   act(() => result.current.setInputValue("ber")); // user typing — fires onInputChange
   act(() => result.current.setOpen(false)); // dirty -> reverts to "Madrid" via RAW setter
-  expect(result.current.inputValue).toBe("Madrid"); // reverted
+  expect(result.current.getState().inputValue).toBe("Madrid"); // reverted
   // The revert must NOT fire onInputChange: only the user's "ber" keystroke did.
   expect(seen).toEqual(["ber"]);
 });
@@ -217,7 +234,7 @@ test("revert-on-close: with nothing selected, an abandoned search clears", () =>
   );
   act(() => result.current.setInputValue("ber"));
   act(() => result.current.setOpen(false));
-  expect(result.current.inputValue).toBe(""); // committedValue is "" -> clears
+  expect(result.current.getState().inputValue).toBe(""); // committedValue is "" -> clears
 });
 
 test("revert-on-close: a clean input (just filled) is left untouched", () => {
@@ -233,7 +250,7 @@ test("revert-on-close: a clean input (just filled) is left untouched", () => {
   );
   act(() => result.current.select("Madrid")); // inputValue -> "Madrid" (clean, == committed)
   act(() => result.current.setOpen(false)); // not dirty -> no revert
-  expect(result.current.inputValue).toBe("Madrid");
+  expect(result.current.getState().inputValue).toBe("Madrid");
   expect(seen).toEqual([]); // clean input: the revert branch does not run, input unchanged
 });
 
@@ -243,23 +260,13 @@ test("revert-on-close does nothing without itemToInputValue (regression guard)",
   );
   act(() => result.current.setInputValue("ber"));
   act(() => result.current.setOpen(false));
-  expect(result.current.inputValue).toBe("ber"); // untouched
-});
-
-test("opening while showing a selection highlights the selected item", () => {
-  const { result } = renderHook(() =>
-    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
-  );
-  act(() => result.current.select("Berlin")); // inputValue -> "Berlin"; list closed
-  expect(result.current.activeIndex).toBe(-1); // nothing highlighted yet
-  act(() => result.current.setOpen(true)); // open while showing the selection
-  expect(result.current.activeIndex).toBe(ITEMS.indexOf("Berlin")); // 2
+  expect(result.current.getState().inputValue).toBe("ber"); // untouched
 });
 
 test("opening a plain search does not force-highlight (regression guard)", () => {
   const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
   act(() => result.current.setOpen(true));
-  expect(result.current.activeIndex).toBe(-1);
+  expect(result.current.getState().activeIndex).toBe(-1);
 });
 
 test("committed-value: clearing the input to empty clears the selection", () => {
@@ -273,9 +280,9 @@ test("committed-value: clearing the input to empty clears the selection", () => 
     }),
   );
   act(() => result.current.select("Madrid")); // inputValue -> "Madrid", selected ["Madrid"]
-  expect(result.current.selectedItems).toEqual(["Madrid"]);
+  expect(result.current.getState().selectedItems).toEqual(["Madrid"]);
   act(() => result.current.setInputValue("")); // user backspaces the whole input
-  expect(result.current.selectedItems).toEqual([]); // selection cleared
+  expect(result.current.getState().selectedItems).toEqual([]); // selection cleared
   expect(seen).toEqual(["Madrid", null]); // select fired "Madrid", clear fired null
 });
 
@@ -283,7 +290,7 @@ test("committed-value: clearing does nothing without itemToInputValue (regressio
   const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
   act(() => result.current.select("Madrid"));
   act(() => result.current.setInputValue(""));
-  expect(result.current.selectedItems).toEqual(["Madrid"]); // no committed-value model -> unchanged
+  expect(result.current.getState().selectedItems).toEqual(["Madrid"]); // no model -> unchanged
 });
 
 test("committed-value: clearing does nothing in multi-select (regression guard)", () => {
@@ -298,5 +305,5 @@ test("committed-value: clearing does nothing in multi-select (regression guard)"
   act(() => result.current.select("Paris"));
   act(() => result.current.select("Berlin"));
   act(() => result.current.setInputValue(""));
-  expect(result.current.selectedItems).toEqual(["Paris", "Berlin"]); // chips carry selection
+  expect(result.current.getState().selectedItems).toEqual(["Paris", "Berlin"]); // chips carry it
 });

@@ -1,5 +1,4 @@
-import type { Virtualizer } from "@tanstack/react-virtual";
-import type { RefObject } from "react";
+import type { KeyboardEvent } from "react";
 
 /**
  * Options accepted by {@link useCombobulate}. Deliberately tree-unaware.
@@ -11,15 +10,26 @@ import type { RefObject } from "react";
 export type UseCombobulateOptions<T> = {
   /** Full list of items to search over. */
   items: T[];
-  /** Accessor for an item's searchable/display text. */
+  /**
+   * Accessor for an item's searchable/display text. Read once when the store
+   * is created — pass a stable (module-level) function, not an inline
+   * closure over changing state; later changes to it are not picked up.
+   */
   getSearchText?: (item: T) => string;
   /**
    * Accessor for an item's stable id. Falls back to the positional index.
-   * Ids must be unique — they become cmdk item values (see
-   * {@link CombobulateApi.itemValue}).
+   * Ids must be unique — they become the Ariakit option ids (see
+   * {@link CombobulateStore.itemValue}). Read once when the store is
+   * created; pass a stable (module-level) function rather than an inline
+   * closure over changing state.
    */
   getItemId?: (item: T) => string;
-  /** Custom filter. Defaults to a normalized substring match. */
+  /**
+   * Custom filter. Defaults to a normalized substring match. Read once when
+   * the store is created — pass a stable (module-level) function, not an
+   * inline closure over changing state; later changes to it are not
+   * picked up.
+   */
   filterItems?: (items: T[], query: string) => T[];
   /** Initial selection for the uncontrolled case. */
   defaultValue?: T | T[] | null;
@@ -31,7 +41,7 @@ export type UseCombobulateOptions<T> = {
   defaultOpen?: boolean;
   /** Fired when open state changes. */
   onOpenChange?: (open: boolean) => void;
-  /** Allow selecting multiple items. */
+  /** Allow selecting multiple items. Read once when the store is created. */
   multiple?: boolean;
   /** External loading flag for async data. Drives the live-region announcement. */
   loading?: boolean;
@@ -45,51 +55,55 @@ export type UseCombobulateOptions<T> = {
    * a selection shows the whole list instead of filtering to it, and an
    * abandoned search reverts to the selection on close. Omit it (the default)
    * and the input stays a pure search box. Ignored when `multiple` is true.
+   * Read once when the store is created; pass a stable (module-level)
+   * function rather than an inline closure over changing state.
    */
   itemToInputValue?: (item: T) => string;
 };
 
-/** Public API returned by {@link useCombobulate}. */
-export type CombobulateApi<T> = {
+/**
+ * Reactive snapshot of a {@link CombobulateStore}. Every field is derived: the
+ * engine truth (open/input/active/selection) lives in the internal Ariakit
+ * combobox store, and the item-shaped fields are mapped back through the
+ * store's config on each read.
+ */
+export type CombobulateState<T> = {
   isOpen: boolean;
-  setOpen: (next: boolean) => void;
   inputValue: string;
-  setInputValue: (value: string) => void;
-  filteredItems: T[];
-  /** cmdk's highlighted item value (the controlled `value` on `<Command>`). */
+  /** The highlighted item's value string (Ariakit `activeId`), or "" when none. */
   activeValue: string;
-  setActiveValue: (value: string) => void;
-  /**
-   * Keydown handler for the input. Implements the jump keys cmdk cannot get
-   * right under virtualization (Home/End/PageUp/PageDown target the whole
-   * filtered list, not the mounted window) and passes every other key through
-   * to cmdk untouched.
-   */
-  onInputKeyDown: (event: import("react").KeyboardEvent) => void;
-  /** Index of {@link CombobulateApi.activeValue} in `filteredItems`, or -1. */
+  /** Index of {@link CombobulateState.activeValue} in `filteredItems`, or -1. */
   activeIndex: number;
   selectedItems: T[];
+  filteredItems: T[];
+  loading: boolean;
+  multiple: boolean;
+};
+
+/**
+ * Store handle composed over an Ariakit combobox store. The imperative methods
+ * work outside React (they read/write the Ariakit store directly); `useState`
+ * is a React hook for components that subscribes to the same store.
+ *
+ * The internal Ariakit store, virtualizer, and scroll ref are deliberately NOT
+ * on this type — they ride on the non-exported `_internal` bag returned by
+ * {@link createCombobulateStore}.
+ */
+export type CombobulateStore<T> = {
+  /** React hook: subscribe to a single derived field. */
+  useState: <K extends keyof CombobulateState<T>>(key: K) => CombobulateState<T>[K];
+  /** Imperative snapshot of the full derived state. */
+  getState: () => CombobulateState<T>;
+  setOpen: (open: boolean) => void;
+  setInputValue: (value: string) => void;
+  setActiveValue: (value: string) => void;
   select: (item: T) => void;
   isSelected: (item: T) => boolean;
   /**
-   * The item's cmdk `value` string: the caller's `getItemId` (or the positional
-   * index), used verbatim.
-   *
-   * cmdk emits `value` back through `onValueChange` unchanged — no
-   * case-folding, no trimming (pinned by `cmdk-behavior.test.tsx`), so the
-   * round-trip through `valueToIndex` needs no normalization. Deliberately
-   * NOT lowercased: that would make ids differing only in case collide
-   * silently in the map.
+   * The item's value string: the caller's `getItemId` (or the positional
+   * index), used verbatim — no case-folding, so ids differing only in case do
+   * not collide. Doubles as the Ariakit option id.
    */
   itemValue: (item: T, index: number) => string;
-  /** Screen-reader announcement string (result count / no-results / loading). */
-  announcement: string;
-  /** External loading flag, forwarded so primitives can render loading states. */
-  loading: boolean;
-  /** Whether multi-select is enabled; drives `aria-checked` on options. */
-  multiple: boolean;
-  /** Internal virtualizer. Exposed for the primitives, not part of the API contract. */
-  virtualizer: Virtualizer<HTMLElement, Element>;
-  /** Ref for the virtualized scroll container. */
-  scrollRef: RefObject<HTMLElement | null>;
+  onInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
 };

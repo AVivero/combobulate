@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { Combobulate } from "../core/primitives";
 import { useCombobulate } from "../core/use-combobulate";
 import { stubElementLayout } from "../test-utils/stub-element-layout";
@@ -9,28 +9,36 @@ import { useCombobulateFloating } from "./use-floating";
 afterEach(() => cleanup());
 
 function Demo({ open }: { open: boolean }) {
-  const api = useCombobulate({ items: ["Paris"], defaultOpen: open });
-  const floating = useCombobulateFloating(api);
+  const store = useCombobulate({ items: ["Paris"], defaultOpen: open });
+  const floating = useCombobulateFloating(store);
   return (
-    <Combobulate.Root api={api}>
+    <Combobulate store={store}>
       <Combobulate.Input ref={floating.reference} {...floating.referenceProps} />
       <Popover floating={floating}>
         <div data-testid="panel">panel</div>
       </Popover>
-    </Combobulate.Root>
+    </Combobulate>
   );
 }
 
-test("Popover renders its children when open", () => {
+test("Popover renders its children when open", async () => {
   const restore = stubElementLayout();
-  render(<Demo open={true} />);
+  // `useFloating`'s `whileElementsMounted: autoUpdate` schedules its first
+  // position update via `requestAnimationFrame` right after mount, outside
+  // `render`'s own synchronous `act`. Flushing a tick inside `act` here lets
+  // that update settle before assertions instead of warning post-test.
+  await act(async () => {
+    render(<Demo open={true} />);
+  });
   expect(screen.queryByTestId("panel")).not.toBeNull();
   restore();
 });
 
-test("Popover renders nothing when closed", () => {
+test("Popover renders nothing when closed", async () => {
   const restore = stubElementLayout();
-  render(<Demo open={false} />);
+  await act(async () => {
+    render(<Demo open={false} />);
+  });
   expect(screen.queryByTestId("panel")).toBeNull();
   restore();
 });
