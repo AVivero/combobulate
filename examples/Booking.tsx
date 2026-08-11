@@ -95,28 +95,36 @@ export function Booking() {
   }
 
   return (
-    <div className="w-[80%] space-y-3">
-      <div className="w-full md:w-1/2">
-        <div className="mb-1 text-xs font-medium text-zinc-500">Origin</div>
-        <Field label="Origin" value={origin} onChange={setOrigin} items={originItems} />
-      </div>
-      <div className="flex justify-center">
-        <button
-          type="button"
-          onClick={swap}
-          className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
-        >
-          ⇅ Swap
-        </button>
-      </div>
-      <div className="w-full md:w-1/2">
-        <div className="mb-1 text-xs font-medium text-zinc-500">Destination</div>
-        <Field
-          label="Destination"
-          value={destination}
-          onChange={setDestination}
-          items={destinationItems}
-        />
+    <div className="w-full max-w-3xl space-y-3">
+      {/* Google-Flights layout: origin · swap · destination on one row for
+          wider viewports; stacked on small screens. */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-2">
+        <div className="flex-1">
+          <div className="mb-1 text-xs font-medium text-zinc-500">Origin</div>
+          <Field label="Origin" value={origin} onChange={setOrigin} items={originItems} />
+        </div>
+        <div className="flex justify-center md:pb-1">
+          <button
+            type="button"
+            onClick={swap}
+            aria-label="Swap origin and destination"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-white text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50"
+          >
+            {/* Arrows point up/down when stacked, left/right when side by side. */}
+            <span className="rotate-90 md:rotate-0" aria-hidden>
+              ⇄
+            </span>
+          </button>
+        </div>
+        <div className="flex-1">
+          <div className="mb-1 text-xs font-medium text-zinc-500">Destination</div>
+          <Field
+            label="Destination"
+            value={destination}
+            onChange={setDestination}
+            items={destinationItems}
+          />
+        </div>
       </div>
       <div className="text-xs text-zinc-500">
         Route:{" "}
