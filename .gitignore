@@ -8,3 +8,6 @@ coverage/
 test-results/
 playwright-report/
 .superpowers/
+
+# Superpowers process artifacts (specs/plans) — local only, not shipped.
+docs/superpowers/
