@@ -10,7 +10,7 @@ import {
 } from "@floating-ui/react";
 import { useEffect, useRef } from "react";
 import type { CombobulateApi } from "../core/types";
-import type { AutocompleteFloating, UseFloatingOptions } from "./types";
+import type { CombobulateFloating, CombobulateFloatingOptions } from "./types";
 
 // Fixed positioning defaults for the combobox dropdown. These were once
 // options; nothing ever overrode them, so they're inlined.
@@ -24,10 +24,10 @@ const PADDING = 8;
  * input width, caps its height to the viewport, and dismisses on
  * outside-click/Escape — driving the combo's own open state.
  */
-export function useAutocompleteFloating<T>(
+export function useCombobulateFloating<T>(
   api: CombobulateApi<T>,
-  options: UseFloatingOptions = {},
-): AutocompleteFloating {
+  options: CombobulateFloatingOptions = {},
+): CombobulateFloating {
   const { closeOnSelect = false } = options;
 
   const { refs, floatingStyles, context } = useFloating({
