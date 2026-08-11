@@ -24,6 +24,13 @@ First tagged release.
 - Callable root `<Combobulate store={store}>` with `.Input/.List/.Item/.Empty/`
   `.LiveRegion/.Popover`.
 - `useCombobulateFloating(store, { closeOnSelect })` for the floating dropdown.
+- Controlled selection via a `value` prop (source of truth; a user pick fires
+  `onChange` without changing the displayed selection until the parent updates
+  `value`). Mutually exclusive with `defaultValue`; input text and open state
+  remain uncontrolled. A seeded single-select selection (`value`/`defaultValue`
+  + `getInputValue`) now pre-fills the input.
+- `store.setValue(value)` imperatively replaces or clears the selection
+  (`null`/`[]` clears) — for "Clear"/"reset" style buttons.
 - Per-item accessors share one `get*` convention: `getItemId` (identity),
   `getSearchText` (text the default filter searches), and `getInputValue` (the
   committed single-select label). `getInputValue` was renamed from

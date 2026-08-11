@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const STORY = "/iframe.html?id=combobulate-multi-select--default&viewMode=story";
+const STORY = "/#/multi-uncontrolled";
 
 test("selecting several airports adds chips; clicking a chip removes it", async ({ page }) => {
   await page.goto(STORY);

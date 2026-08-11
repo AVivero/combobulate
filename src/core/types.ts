@@ -3,9 +3,10 @@ import type { KeyboardEvent } from "react";
 /**
  * Options accepted by {@link useCombobulate}. Deliberately tree-unaware.
  *
- * This hook is **uncontrolled**: selection, input text, and open state are
- * owned internally and surfaced via `onChange`/`onInputChange`/`onOpenChange`
- * callbacks plus `default*` seed values.
+ * Selection can be **uncontrolled** (owned internally, seeded by `defaultValue`)
+ * or **controlled** (the `value` prop is the source of truth). Input text and
+ * open state are always uncontrolled, surfaced via
+ * `onInputChange`/`onOpenChange` + `default*`.
  */
 export type UseCombobulateOptions<T> = {
   /** Full list of items to search over. */
@@ -40,8 +41,21 @@ export type UseCombobulateOptions<T> = {
    * closure over changing state; later changes are not picked up.
    */
   filterItems?: (items: T[], query: string) => T[];
-  /** Initial selection for the uncontrolled case. */
+  /** Initial selection for the uncontrolled case (no `value` prop). */
   defaultValue?: T | T[] | null;
+  /**
+   * Controlled selection. When provided (including `null`), combobulate treats
+   * it as the single source of truth: the displayed selection always reflects
+   * this prop, and a user pick fires `onChange(next)` WITHOUT changing the
+   * displayed selection until the parent updates `value`. Mutually exclusive
+   * with `defaultValue`. Same shape as `onChange`, so it round-trips:
+   * `value={selected} onChange={setSelected}`.
+   *
+   * Object items: the value must be recognizable as an item in `items` — pass
+   * `getItemId`, or pass the same object references that live in `items` (the
+   * same requirement `defaultValue` has).
+   */
+  value?: T | T[] | null;
   /** Fired when selection changes. */
   onChange?: (value: T | T[] | null) => void;
   /** Fired synchronously on every input change. */
@@ -107,6 +121,13 @@ export type CombobulateStore<T> = {
   setInputValue: (value: string) => void;
   setActiveValue: (value: string) => void;
   select: (item: T) => void;
+  /**
+   * Imperatively set the whole selection: replace with `value`, or clear on
+   * `null`/`[]`. Fires `onChange`. In controlled mode it only fires `onChange`
+   * (the parent owns `value`); uncontrolled, it also updates the internal
+   * selection. For "Clear"/"reset" style buttons.
+   */
+  setValue: (value: T | T[] | null) => void;
   isSelected: (item: T) => boolean;
   /**
    * The item's value string: the caller's `getItemId` (or the positional

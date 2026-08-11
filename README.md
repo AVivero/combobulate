@@ -180,9 +180,10 @@ Combobulate implements the [ARIA editable combobox](https://www.w3.org/WAI/ARIA/
 
 ## Examples
 
-Storybook is the demo surface. Both examples run over the same ~3,300 real
-airports in one virtualized list — the virtualization + full-list-ARIA story
-that's the reason this exists — floating by default:
+A Vite examples app (sidebar + routes) is the demo surface. Both examples run
+over the same ~3,300 real airports in one virtualized list — the
+virtualization + full-list-ARIA story that's the reason this exists —
+floating by default:
 
 - **Single Select** — picking fills the input with the chosen airport (the
   committed-value model); reopening shows the whole list with the chosen row marked.
@@ -190,7 +191,7 @@ that's the reason this exists — floating by default:
   search box and the list stays open after each pick.
 
 ```sh
-bun run storybook
+bun run dev
 ```
 
 Patterns beyond the examples — custom/fuzzy filtering, remote/async search, and

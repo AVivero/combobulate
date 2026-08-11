@@ -10,7 +10,7 @@ test.use({ viewport: { width: 560, height: 440 } });
 test("a popover capped by tight space shrinks-and-scrolls instead of clipping", async ({
   page,
 }) => {
-  await page.goto("/iframe.html?id=combobulate-single-select--default&viewMode=story");
+  await page.goto("/#/single-uncontrolled");
   await page.getByRole("combobox").click();
   await page.waitForSelector('[role="option"]');
   await page.waitForTimeout(120); // let floating-ui settle

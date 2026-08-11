@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { act, renderHook } from "@testing-library/react";
-import { StrictMode } from "react";
+import { StrictMode, useState } from "react";
 import { stubElementLayout } from "../../test-utils/stub-element-layout";
 import type { CombobulateStoreInternal } from "../store";
 import { useCombobulate } from "../use-combobulate";
@@ -306,4 +306,60 @@ test("committed-value: clearing does nothing in multi-select (regression guard)"
   act(() => result.current.select("Berlin"));
   act(() => result.current.setInputValue(""));
   expect(result.current.getState().selectedItems).toEqual(["Paris", "Berlin"]); // chips carry it
+});
+
+test("controlled: value is the source of truth; select requests then parent reflects", () => {
+  const { result } = renderHook(() => {
+    const [val, setVal] = useState<string | null>(null);
+    const store = useCombobulate<string>({
+      items: ITEMS,
+      value: val,
+      onChange: (v) => setVal(v as string | null),
+    });
+    return { store, val };
+  });
+  expect(result.current.store.getState().selectedItems).toEqual([]);
+  act(() => result.current.store.select("Berlin"));
+  expect(result.current.val).toBe("Berlin"); // onChange drove parent state
+  expect(result.current.store.getState().selectedItems).toEqual(["Berlin"]); // reflected in
+});
+
+test("controlled: external value change (swap) updates the selection", () => {
+  const { result } = renderHook(() => {
+    const [val, setVal] = useState<string | null>("Paris");
+    return { store: useCombobulate<string>({ items: ITEMS, value: val }), setVal };
+  });
+  expect(result.current.store.getState().selectedItems).toEqual(["Paris"]);
+  act(() => result.current.setVal("Madrid"));
+  expect(result.current.store.getState().selectedItems).toEqual(["Madrid"]);
+});
+
+test("controlled single-select with getInputValue pre-fills the committed input", () => {
+  const { result } = renderHook(() =>
+    useCombobulate({ items: ITEMS, value: "Paris", getInputValue: (c) => `City: ${c}` }),
+  );
+  expect(result.current.getState().inputValue).toBe("City: Paris");
+});
+
+test("controlled: combined value+items change (dependent list / swap) refreshes committed input", () => {
+  const { result } = renderHook(() => {
+    const [value, setValue] = useState<string | null>("Paris");
+    const [excluded, setExcluded] = useState<string>("Berlin");
+    const items = ITEMS.filter((c) => c !== excluded);
+    const store = useCombobulate<string>({
+      items,
+      value,
+      getItemId: (c) => c,
+      getInputValue: (c) => `City: ${c}`,
+    });
+    const swap = () => {
+      setValue("Berlin");
+      setExcluded("Paris");
+    };
+    return { store, swap };
+  });
+  expect(result.current.store.getState().inputValue).toBe("City: Paris");
+  act(() => result.current.swap());
+  expect(result.current.store.getState().selectedItems).toEqual(["Berlin"]);
+  expect(result.current.store.getState().inputValue).toBe("City: Berlin");
 });

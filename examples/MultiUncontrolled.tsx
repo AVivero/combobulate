@@ -1,51 +1,48 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { type FocusEvent, useCallback } from "react";
 import { Combobulate, useCombobulate, useCombobulateFloating } from "../src/index";
 import airports from "./data/airports.json";
 import type { Airport } from "./data/types";
 
 const AIRPORTS = airports as Airport[];
-
-// Row label. ~50 airports have a blank `city`; fall back to `country` so no row
-// renders a dangling "— Name (CODE)".
-const airportLabel = (a: Airport) => `${a.city || a.country} — ${a.name} (${a.iata})`;
+const airportLabel = (a: Airport): string => `${a.city || a.country} — ${a.name} (${a.iata})`;
+const airportSearch = (a: Airport): string =>
+  [a.city, a.name, a.iata, a.country].filter(Boolean).join(" ");
 
 /**
- * Single-select over ~3,300 real airports, styled **entirely with Tailwind** —
- * including the active (hover/keyboard) and chosen row states via `data-*` /
- * `aria-*` variants. The whole integration lives in this one component (no
- * shared helpers) so you can read the wiring top to bottom. Same look as the
- * Multi Select example; only the styling strategy differs.
+ * Multi-select over the same airports, pure Tailwind. The input stays a search
+ * box; chips carry the selection. Uncontrolled — Clear all resets via
+ * `store.setValue([])`.
  */
-function SingleSelect() {
+export function MultiUncontrolled() {
   const store = useCombobulate<Airport>({
     items: AIRPORTS,
+    multiple: true,
     getItemId: (a) => a.iata,
-    getSearchText: (a: Airport) => [a.city, a.name, a.iata, a.country].filter(Boolean).join(" "),
-    getInputValue: airportLabel, // committed-value single-select (fills on pick)
+    getSearchText: airportSearch,
     estimateSize: () => 44,
   });
-  const floating = useCombobulateFloating(store, { closeOnSelect: true });
-
-  // The one demo nicety: select-all on focus, so a committed value is ready to be
-  // replaced by the next keystroke.
-  const inputValue = store.useState("inputValue");
-  const onFocus = useCallback(
-    (e: FocusEvent<HTMLInputElement>) => {
-      if (inputValue !== "") e.currentTarget.select();
-    },
-    [inputValue],
-  );
+  const floating = useCombobulateFloating(store, { closeOnSelect: false });
+  const selectedItems = store.useState("selectedItems");
 
   return (
     <div className="w-[380px]">
-      <Combobulate store={store} label="Airport">
+      <div data-testid="chips" className="mb-2 flex flex-wrap gap-1.5">
+        {selectedItems.map((airport) => (
+          <button
+            key={airport.iata}
+            type="button"
+            onClick={() => store.select(airport)}
+            className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700"
+          >
+            {airport.iata} <span aria-hidden>✕</span>
+          </button>
+        ))}
+      </div>
+      <Combobulate store={store} label="Airports">
         <Combobulate.Input
           ref={floating.reference}
           {...floating.referenceProps}
-          onFocus={onFocus}
-          aria-label="Airport"
-          placeholder="Search ~3,300 airports…"
+          aria-label="Airports"
+          placeholder="Pick several airports…"
           className="w-full rounded-md border border-zinc-300 px-2.5 py-2 text-sm text-zinc-900 outline-none focus:border-indigo-500"
         />
         <Combobulate.Popover
@@ -75,13 +72,13 @@ function SingleSelect() {
         </Combobulate.Popover>
         <Combobulate.LiveRegion />
       </Combobulate>
+      <button
+        type="button"
+        onClick={() => store.setValue([])}
+        className="mt-2 rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100"
+      >
+        Clear all
+      </button>
     </div>
   );
 }
-
-const meta: Meta<typeof SingleSelect> = {
-  title: "Combobulate/Single Select",
-  component: SingleSelect,
-};
-export default meta;
-export const Default: StoryObj<typeof SingleSelect> = {};

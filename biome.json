@@ -13,7 +13,6 @@
       "playwright-report",
       "test-results",
       ".claude",
-      "storybook-static",
       "examples/data/*.json"
     ]
   }
