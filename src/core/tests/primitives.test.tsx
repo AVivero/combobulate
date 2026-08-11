@@ -90,6 +90,18 @@ test("focus-out (blur to another control) closes the popup", () => {
   expect(screen.queryAllByRole("option")).toHaveLength(0);
 });
 
+test("blur INTO the popup (e.g. dragging the list scrollbar) does NOT close", () => {
+  render(<Harness items={["Paris", "Berlin"]} />);
+  expect(screen.getAllByRole("option").length).toBeGreaterThan(0);
+  const input = screen.getByRole("combobox");
+  const listbox = screen.getByRole("listbox");
+  // A scrollbar drag shifts focus onto the tabindex=-1 listbox that wraps the
+  // scroll container, so the input blurs with relatedTarget inside the popup.
+  // That is not a real focus-out — the list must stay open.
+  fireEvent.blur(input, { relatedTarget: listbox });
+  expect(screen.getAllByRole("option").length).toBeGreaterThan(0);
+});
+
 test("LiveRegion debounces count changes rather than flooding on each keystroke", async () => {
   render(<Harness items={["Paris", "Madrid", "Berlin"]} />);
   const status = screen.getByRole("status");

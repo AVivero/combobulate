@@ -106,7 +106,14 @@ const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputEl
            * layer's outside-press dismiss so an in-list click doesn't close.
            */
           (event) => {
-            if (event.relatedTarget) store.setOpen(false);
+            const next = event.relatedTarget as HTMLElement | null;
+            // Close only when focus genuinely LEAVES the combobox. `relatedTarget`
+            // null (non-focusable/pointer target) → leave to outside-press dismiss.
+            // Focus landing inside the popup listbox must NOT close: dragging the
+            // list's scrollbar shifts focus onto the `tabindex=-1` listbox (which
+            // contains the scroll container), and an option can take focus too —
+            // neither is a real focus-out.
+            if (next && !next.closest('[role="listbox"]')) store.setOpen(false);
           },
           props.onBlur,
         )}
@@ -211,6 +218,12 @@ function Item<T>({ item, index, children }: CombobulateItemProps<T>) {
     <Ariakit.ComboboxItem
       id={value}
       value={value}
+      // Highlight the row on mouse hover (stamps `data-active-item`). Ariakit
+      // defaults `focusOnHover` to false for an editable combobox, which left
+      // rows un-highlighted on hover even though keyboard nav highlighted them.
+      // The active-row bridge scrolls with `align: "auto"`, so highlighting an
+      // already-visible hovered row doesn't jog the list.
+      focusOnHover
       setValueOnClick={false}
       selectValueOnClick={false}
       hideOnClick={false}
