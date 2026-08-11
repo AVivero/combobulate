@@ -44,10 +44,12 @@ export function useCombobulateFloating<T>(
       size({
         padding: PADDING,
         apply({ rects, elements, availableHeight }) {
-          Object.assign(elements.floating.style, {
-            maxHeight: `${availableHeight}px`,
-            width: `${rects.reference.width}px`,
-          });
+          // Match the input width and cap the popover to the available viewport
+          // height. The content inside flex-shrinks to fit (min-height:0 down the
+          // chain) and the list scrolls — so a flipped popover shrinks to fit
+          // rather than clipping its content.
+          elements.floating.style.width = `${rects.reference.width}px`;
+          elements.floating.style.maxHeight = `${availableHeight}px`;
         },
       }),
     ],
