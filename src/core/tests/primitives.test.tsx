@@ -196,3 +196,23 @@ test("single-select marks the chosen option with aria-selected", () => {
     "true",
   );
 });
+
+test("Item forwards className to the option element (for state styling)", () => {
+  function Styled() {
+    const store = useCombobulate({ items: ["Paris"], defaultOpen: true, getItemId: (i) => i });
+    return (
+      <Combobulate store={store}>
+        <Combobulate.Input aria-label="Search" />
+        <Combobulate.List<string>>
+          {(item, index) => (
+            <Combobulate.Item item={item} index={index} className="opt-x">
+              {item}
+            </Combobulate.Item>
+          )}
+        </Combobulate.List>
+      </Combobulate>
+    );
+  }
+  render(<Styled />);
+  expect(screen.getByRole("option", { name: "Paris" }).className).toContain("opt-x");
+});

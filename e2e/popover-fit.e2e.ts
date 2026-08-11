@@ -16,29 +16,27 @@ test("a popover capped by tight space shrinks-and-scrolls instead of clipping", 
   await page.waitForTimeout(120); // let floating-ui settle
 
   const m = await page.evaluate(() => {
-    const panel = document.querySelector(".cbl-panel") as HTMLElement | null;
-    const popover = panel?.parentElement as HTMLElement | null;
+    const popover = document.querySelector('[data-testid="cbl-popover"]') as HTMLElement | null;
     let scroller: HTMLElement | null = null;
-    for (const el of Array.from(document.querySelectorAll(".cbl-panel div"))) {
+    for (const el of Array.from(popover?.querySelectorAll("div") ?? [])) {
       if (getComputedStyle(el).overflowY === "auto") {
         scroller = el as HTMLElement;
         break;
       }
     }
-    const pr = popover?.getBoundingClientRect();
+    const r = popover?.getBoundingClientRect();
     return {
       popoverMaxH: Number.parseFloat(getComputedStyle(popover as Element).maxHeight),
-      panelScrollH: panel?.scrollHeight ?? 0,
-      popoverClientH: popover?.clientHeight ?? 0,
+      contentOverflow: (popover?.scrollHeight ?? 0) - (popover?.clientHeight ?? 0),
       scrollerScrolls: (scroller?.scrollHeight ?? 0) > (scroller?.clientHeight ?? 0),
-      top: pr?.top ?? -1,
-      bottom: pr?.bottom ?? 1e9,
+      top: r?.top ?? -1,
+      bottom: r?.bottom ?? 1e9,
       vh: window.innerHeight,
     };
   });
 
   expect(m.popoverMaxH).toBeLessThan(240); // precondition: space is tighter than the requested max
-  expect(m.panelScrollH).toBeLessThanOrEqual(m.popoverClientH + 1); // content isn't clipped
+  expect(m.contentOverflow).toBeLessThanOrEqual(1); // content isn't clipped (it fit by shrinking)
   expect(m.scrollerScrolls).toBe(true); // it scrolls to fit
   expect(m.top).toBeGreaterThanOrEqual(-1); // within the viewport
   expect(m.bottom).toBeLessThanOrEqual(m.vh + 1);
