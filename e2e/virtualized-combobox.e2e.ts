@@ -65,7 +65,15 @@ test("hovering an option highlights it", async ({ page }) => {
   await input.click();
   const third = page.getByRole("option").nth(2);
   const id = await third.getAttribute("id");
-  await third.hover();
+  // Drive hover as an INTERPOLATED pointer move, not a single synthetic hop:
+  // Ariakit's focusOnHover ignores a move whose movementX/Y is 0, and headless
+  // WebKit (Linux CI) can report exactly that for a one-shot `.hover()` — green on
+  // macOS, red on CI. Moving through several steps while over the row produces the
+  // real movement deltas focusOnHover needs.
+  const box = await third.boundingBox();
+  if (!box) throw new Error("option 3 has no bounding box");
+  await page.mouse.move(box.x + 4, box.y + 4);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 12 });
   await expect(third).toHaveAttribute("data-active-item", "true");
   await expect(input).toHaveAttribute("aria-activedescendant", String(id));
 });
