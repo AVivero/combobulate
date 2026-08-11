@@ -152,10 +152,24 @@ function List<T>({ children, maxHeight = 300 }: CombobulateListProps<T>) {
   if (!isOpen || virtualizer === null) return null;
   const rows = virtualizer.getVirtualItems();
   return (
-    <Ariakit.ComboboxList>
+    <Ariakit.ComboboxList
+      style={{ display: "flex", flexDirection: "column", flex: "0 1 auto", minHeight: 0 }}
+    >
       <div
         ref={scrollRef as React.Ref<HTMLDivElement>}
-        style={{ overflow: "auto", position: "relative", maxHeight }}
+        style={{
+          overflow: "auto",
+          position: "relative",
+          // Cap at the requested max, but flex-shrink below it to fit when the
+          // popover is capped tighter by the floating layer (a flip into less
+          // space) — so the list SCROLLS instead of being clipped. The
+          // `min-height:0` chain up to the popover is what allows shrinking below
+          // the content height; with no floating layer (in-flow usage) the popover
+          // isn't capped, so `maxHeight` is the only bound.
+          flex: "0 1 auto",
+          minHeight: 0,
+          maxHeight,
+        }}
       >
         <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
           {rows.map((row) => {

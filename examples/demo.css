@@ -41,6 +41,12 @@
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   padding: 6px;
+  /* A flex column with min-height:0 so the popover's capped height flows down to
+     the list, which then scrolls (instead of this card overflowing and being
+     clipped) when the dropdown flips into a tighter space. */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 [role="option"] {
