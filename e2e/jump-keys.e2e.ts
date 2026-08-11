@@ -33,8 +33,16 @@ test("Ctrl+Home returns to the true first airport", async ({ page }) => {
   await page.goto(STORY);
   const input = page.getByRole("combobox");
   await input.click();
+
+  // Wait for Ctrl+End to fully SETTLE at the true last item before jumping back.
+  // `activePosinset` is null while a jump is still resolving, and `null !== "1"`,
+  // so an intermediate `.not.toBe("1")` would pass prematurely — letting Ctrl+Home
+  // fire mid-jump and race two scrollToIndex calls (whichever settles last wins;
+  // if Ctrl+End wins, row 0 never mounts and the pending activate is stuck). Poll
+  // the settled far-end position instead.
+  const total = Number(await page.getByRole("option").first().getAttribute("aria-setsize"));
   await input.press("Control+End");
-  await expect.poll(activePosinset(page)).not.toBe("1"); // reached the far end first
+  await expect.poll(activePosinset(page)).toBe(String(total));
   await input.press("Control+Home");
 
   await expect.poll(activePosinset(page)).toBe("1");
