@@ -142,21 +142,21 @@ test("syncs changed loading into the store", () => {
   expect(result.current.getState().loading).toBe(true);
 });
 
-test("itemToInputValue: selecting fills the input with the item's label", () => {
+test("getInputValue: selecting fills the input with the item's label", () => {
   const { result } = renderHook(() =>
-    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, getInputValue: (c) => c }),
   );
   act(() => result.current.select("Madrid"));
   expect(result.current.getState().inputValue).toBe("Madrid");
 });
 
-test("itemToInputValue: fill does NOT fire onInputChange (typing does)", () => {
+test("getInputValue: fill does NOT fire onInputChange (typing does)", () => {
   const seen: string[] = [];
   const { result } = renderHook(() =>
     useCombobulate({
       items: ITEMS,
       getItemId: (c) => c,
-      itemToInputValue: (c) => c,
+      getInputValue: (c) => c,
       onInputChange: (v) => seen.push(v),
     }),
   );
@@ -166,31 +166,31 @@ test("itemToInputValue: fill does NOT fire onInputChange (typing does)", () => {
   expect(seen).toEqual(["ber"]);
 });
 
-test("itemToInputValue: while showing a selection, the full list is shown", () => {
+test("getInputValue: while showing a selection, the full list is shown", () => {
   const { result } = renderHook(() =>
-    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, getInputValue: (c) => c }),
   );
   act(() => result.current.select("Madrid")); // inputValue -> "Madrid" (a committed label)
   // "Madrid" would substring-filter to just Madrid, but showing-a-selection bypasses:
   expect(result.current.getState().filteredItems).toEqual(ITEMS);
 });
 
-test("itemToInputValue: typing after a pick filters normally (dirty)", () => {
+test("getInputValue: typing after a pick filters normally (dirty)", () => {
   const { result } = renderHook(() =>
-    useCombobulate({ items: ITEMS, getItemId: (c) => c, itemToInputValue: (c) => c }),
+    useCombobulate({ items: ITEMS, getItemId: (c) => c, getInputValue: (c) => c }),
   );
   act(() => result.current.select("Madrid"));
   act(() => result.current.setInputValue("ber")); // now a search, not the committed label
   expect(result.current.getState().filteredItems).toEqual(["Berlin"]);
 });
 
-test("itemToInputValue is ignored in multi-select", () => {
+test("getInputValue is ignored in multi-select", () => {
   const { result } = renderHook(() =>
     useCombobulate({
       items: ITEMS,
       getItemId: (c) => c,
       multiple: true,
-      itemToInputValue: (c) => c,
+      getInputValue: (c) => c,
     }),
   );
   act(() => result.current.select("Madrid"));
@@ -198,7 +198,7 @@ test("itemToInputValue is ignored in multi-select", () => {
   expect(result.current.getState().filteredItems).toEqual(ITEMS);
 });
 
-test("without itemToInputValue, selecting does not touch the input (regression guard)", () => {
+test("without getInputValue, selecting does not touch the input (regression guard)", () => {
   const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
   act(() => result.current.select("Madrid"));
   expect(result.current.getState().inputValue).toBe("");
@@ -210,7 +210,7 @@ test("revert-on-close: a dirty search reverts to the committed selection without
     useCombobulate({
       items: ITEMS,
       getItemId: (c) => c,
-      itemToInputValue: (c) => c,
+      getInputValue: (c) => c,
       defaultOpen: true,
       onInputChange: (v) => seen.push(v),
     }),
@@ -228,7 +228,7 @@ test("revert-on-close: with nothing selected, an abandoned search clears", () =>
     useCombobulate({
       items: ITEMS,
       getItemId: (c) => c,
-      itemToInputValue: (c) => c,
+      getInputValue: (c) => c,
       defaultOpen: true,
     }),
   );
@@ -243,7 +243,7 @@ test("revert-on-close: a clean input (just filled) is left untouched", () => {
     useCombobulate({
       items: ITEMS,
       getItemId: (c) => c,
-      itemToInputValue: (c) => c,
+      getInputValue: (c) => c,
       defaultOpen: true,
       onInputChange: (v) => seen.push(v),
     }),
@@ -254,7 +254,7 @@ test("revert-on-close: a clean input (just filled) is left untouched", () => {
   expect(seen).toEqual([]); // clean input: the revert branch does not run, input unchanged
 });
 
-test("revert-on-close does nothing without itemToInputValue (regression guard)", () => {
+test("revert-on-close does nothing without getInputValue (regression guard)", () => {
   const { result } = renderHook(() =>
     useCombobulate({ items: ITEMS, getItemId: (c) => c, defaultOpen: true }),
   );
@@ -275,7 +275,7 @@ test("committed-value: clearing the input to empty clears the selection", () => 
     useCombobulate({
       items: ITEMS,
       getItemId: (c) => c,
-      itemToInputValue: (c) => c,
+      getInputValue: (c) => c,
       onChange: (v) => seen.push(v),
     }),
   );
@@ -286,7 +286,7 @@ test("committed-value: clearing the input to empty clears the selection", () => 
   expect(seen).toEqual(["Madrid", null]); // select fired "Madrid", clear fired null
 });
 
-test("committed-value: clearing does nothing without itemToInputValue (regression guard)", () => {
+test("committed-value: clearing does nothing without getInputValue (regression guard)", () => {
   const { result } = renderHook(() => useCombobulate({ items: ITEMS, getItemId: (c) => c }));
   act(() => result.current.select("Madrid"));
   act(() => result.current.setInputValue(""));
@@ -299,7 +299,7 @@ test("committed-value: clearing does nothing in multi-select (regression guard)"
       items: ITEMS,
       getItemId: (c) => c,
       multiple: true,
-      itemToInputValue: (c) => c,
+      getInputValue: (c) => c,
     }),
   );
   act(() => result.current.select("Paris"));

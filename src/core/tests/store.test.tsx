@@ -98,7 +98,7 @@ test("store: select writes inputValue BEFORE firing onChange (committed-value fi
   const store = createCombobulateStore({
     items: ITEMS,
     getItemId: (c) => c,
-    itemToInputValue: (c) => `Selected: ${c}`,
+    getInputValue: (c) => `Selected: ${c}`,
     onChange: () => {
       inputValueDuringOnChange = store.getState().inputValue;
     },
