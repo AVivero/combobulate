@@ -15,8 +15,9 @@ export type PopoverProps = {
  * height, so it's a flex column and the inner list scrolls to fill it.
  */
 export function Popover<T>({ floating, children }: PopoverProps) {
-  const api = useCombobulateContext<T>();
-  if (!api.isOpen) return null;
+  const store = useCombobulateContext<T>();
+  const isOpen = store.useState("isOpen");
+  if (!isOpen) return null;
   return (
     <div
       ref={floating.floating}

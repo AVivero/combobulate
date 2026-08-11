@@ -9,7 +9,7 @@ import {
   useInteractions,
 } from "@floating-ui/react";
 import { useEffect, useRef } from "react";
-import type { CombobulateApi } from "../core/types";
+import type { CombobulateStore } from "../core/types";
 import type { CombobulateFloating, CombobulateFloatingOptions } from "./types";
 
 // Fixed positioning defaults for the combobox dropdown. These were once
@@ -22,17 +22,19 @@ const PADDING = 8;
  * Opt-in floating behavior for a Combobulate combobox. Wraps Floating UI so the
  * dropdown anchors below the input, flips/shifts to stay on screen, matches the
  * input width, caps its height to the viewport, and dismisses on
- * outside-click/Escape — driving the combo's own open state.
+ * outside-click/Escape — driving the store's own open state.
  */
 export function useCombobulateFloating<T>(
-  api: CombobulateApi<T>,
+  store: CombobulateStore<T>,
   options: CombobulateFloatingOptions = {},
 ): CombobulateFloating {
   const { closeOnSelect = false } = options;
 
+  const isOpen = store.useState("isOpen");
+
   const { refs, floatingStyles, context } = useFloating({
-    open: api.isOpen,
-    onOpenChange: (open) => api.setOpen(open),
+    open: isOpen,
+    onOpenChange: store.setOpen,
     placement: PLACEMENT,
     whileElementsMounted: autoUpdate,
     middleware: [
@@ -54,16 +56,37 @@ export function useCombobulateFloating<T>(
   const dismiss = useDismiss(context);
   const { getReferenceProps, getFloatingProps } = useInteractions([dismiss]);
 
-  // Close on select (single-select): fire when the selection signature changes
-  // to a non-empty value. Kept in the floating layer so the core stays untouched.
-  const signature = api.selectedItems.map((item, i) => api.itemValue(item, i)).join("|");
-  const prevSignature = useRef(signature);
+  /**
+   * Close on select (single-select): fire when the selection actually
+   * changes to a non-empty value. Kept in the floating layer so core stays
+   * untouched.
+   *
+   * Diffed by the `selectedItems` array's own reference, not a recomputed
+   * "signature" string. The store caches `selectedItems` behind its internal
+   * `selectedValue` (required so `useSyncExternalStore` doesn't loop), which
+   * means the reference is stable across re-renders that don't touch
+   * selection and gets a fresh reference on every real selection change —
+   * including a single-select re-pick of a *different* item, where the
+   * array's length never changes.
+   *
+   * A prior version built the signature by mapping each selected item
+   * through `store.itemValue(item, i)` using `i` as the item's position
+   * *within `selectedItems`* — always `0` for single-select. Without a
+   * `getItemId` configured, `itemValue` falls back to `String(index)`, so
+   * the signature stayed the literal string `"0"` across a re-pick and
+   * `closeOnSelect` silently stopped firing after the first selection. Using
+   * the store's own array reference sidesteps reconstructing (and
+   * miscomputing) that identity in the floating layer.
+   */
+  const selectedItems = store.useState("selectedItems");
+  const prevSelectedItemsRef = useRef(selectedItems);
   useEffect(() => {
-    if (closeOnSelect && signature !== prevSignature.current && api.selectedItems.length > 0) {
-      api.setOpen(false);
+    const changed = selectedItems !== prevSelectedItemsRef.current;
+    prevSelectedItemsRef.current = selectedItems;
+    if (closeOnSelect && changed && selectedItems.length > 0) {
+      store.setOpen(false);
     }
-    prevSignature.current = signature;
-  }, [signature, closeOnSelect, api]);
+  }, [selectedItems, closeOnSelect, store]);
 
   return {
     reference: refs.setReference,
