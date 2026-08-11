@@ -12,6 +12,18 @@ bun run build    # tsup → dist/
 bun run storybook
 ```
 
+## ⚠️ Upgrading `@ariakit/react`
+
+`@ariakit/react` is pinned `~` (patch-only). It has no public `@ariakit/core` at
+`~0.4.37`; the framework-agnostic combobox store lives in `@ariakit/components`
+and `@ariakit/store`, which `src/core/store.ts` imports directly. Those two are
+pinned **EXACT** (`0.1.10` / `0.1.8`) in `package.json` because they disclaim
+semver (breaking changes in patch/minor) and because the exact pins must match
+`@ariakit/react`'s transitive versions so the install dedupes to a single store
+instance (a duplicate breaks store-identity interop with `<Combobox>`). When you
+bump `@ariakit/react`, re-verify these three pins together — they are
+load-bearing (see the comment above the imports in `src/core/store.ts`).
+
 ## ⚠️ Upgrading `cmdk` or `@tanstack/react-virtual`
 
 These two are pinned with `~` (patch-only) in `package.json` **on purpose**, not

@@ -1,3 +1,14 @@
+/**
+ * Ariakit's framework-agnostic store internals. At `@ariakit/react@~0.4.37` there
+ * is no public `@ariakit/core`; the core combobox store lives in these packages,
+ * which `@ariakit/react` pulls in transitively. We depend on them directly (and
+ * must, so tsup externalizes rather than inlines a second store instance — a
+ * duplicate would not share identity with the store `@ariakit/react`'s
+ * `<Combobox>` components use). They disclaim semver (breaking changes land in
+ * patch/minor), so they are pinned EXACT in package.json (`0.1.10`/`0.1.8`) to
+ * match `@ariakit/react`'s own transitive pins. Whenever `@ariakit/react` is
+ * bumped, re-verify these two together for dedup — they are load-bearing.
+ */
 import {
   type ComboboxStore,
   createComboboxStore,
