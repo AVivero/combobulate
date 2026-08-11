@@ -104,8 +104,12 @@ full-page search, a sidebar filter)? Skip the floating layer entirely — render
 
 ## Filtering
 
-The default is a diacritic-insensitive substring ("includes") match. Bring your
-own matcher with `filterItems`.
+There's one filter with one override. Provide `filterItems(items, query)` to
+bring your own matcher — fuzzy, ranking, multi-field, async-shaped — returning
+the matches in display order. If you don't, the built-in filter runs: a
+diacritic-insensitive substring ("includes") match over `getSearchText(item)`.
+String items search themselves; for objects, point `getSearchText` at the
+field(s) you want searchable — no `filterItems` needed.
 
 **Custom / fuzzy (e.g. Fuse.js):**
 
@@ -147,6 +151,21 @@ function RemoteCombobox() {
   // …render with Combobulate.* as usual
 }
 ```
+
+## Item identity
+
+Combobulate identifies options **structurally** by default — by object reference,
+or by value for primitives — so string lists and stable object lists need no
+configuration. Provide `getItemId(item) => string` when an item's object
+reference can change while it stays logically the same:
+
+- async re-fetches (paginate/refresh/revalidate returns new objects),
+- lists rebuilt every render (`items={raw.map(toOption)}`),
+- a `defaultValue` loaded from a different source than `items`.
+
+Without it, those cases can't recognize the re-referenced item as the current
+selection. (That's why the async example above sets `getItemId`.) It's an
+identity accessor, not an id format — the returned string just has to be unique.
 
 ## Accessibility
 

@@ -67,16 +67,9 @@ export function useCombobulateFloating<T>(
    * means the reference is stable across re-renders that don't touch
    * selection and gets a fresh reference on every real selection change —
    * including a single-select re-pick of a *different* item, where the
-   * array's length never changes.
-   *
-   * A prior version built the signature by mapping each selected item
-   * through `store.itemValue(item, i)` using `i` as the item's position
-   * *within `selectedItems`* — always `0` for single-select. Without a
-   * `getItemId` configured, `itemValue` falls back to `String(index)`, so
-   * the signature stayed the literal string `"0"` across a re-pick and
-   * `closeOnSelect` silently stopped firing after the first selection. Using
-   * the store's own array reference sidesteps reconstructing (and
-   * miscomputing) that identity in the floating layer.
+   * array's length never changes. (Diffing a recomputed "signature" string
+   * here would mean reconstructing item identity in the floating layer — the
+   * store's job — so we lean on its reference instead.)
    */
   const selectedItems = store.useState("selectedItems");
   const prevSelectedItemsRef = useRef(selectedItems);

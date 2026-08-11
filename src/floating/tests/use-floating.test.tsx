@@ -22,14 +22,12 @@ test("closeOnSelect closes the dropdown when a selection is made", () => {
 });
 
 /**
- * Regression for the audit's M1 finding. Without a `getItemId`, `itemValue`
- * falls back to the item's positional index. A prior version built the
- * close-on-select signature from `store.itemValue(item, i)` where `i` was the
- * item's position *within `selectedItems`* — always `0` for single-select —
- * so the signature stayed the literal string `"0"` across a re-pick and
- * `closeOnSelect` silently stopped firing after the first selection. Diffing
- * the store's own `selectedItems` array reference (which changes on every
- * real selection change, re-pick included) must keep closing every time.
+ * Regression for the audit's M1 finding: `closeOnSelect` must fire on EVERY real
+ * selection change — including a single-select re-pick of a *different* item with
+ * no `getItemId`, where the selection array's length never changes. A prior
+ * version diffed a recomputed "signature" string that collapsed to a constant in
+ * that case and stopped closing after the first pick; diffing the store's own
+ * `selectedItems` array reference keeps it closing every time.
  */
 test("closeOnSelect fires again on re-picking a different item with no getItemId", () => {
   const store = createCombobulateStore({ items: ["JFK", "LAX"], defaultOpen: true });
