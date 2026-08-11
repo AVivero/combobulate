@@ -38,19 +38,19 @@ come along as regular dependencies — one install, no extra peer setup.
 ## Use
 
 Like most comboboxes, the list is a **floating dropdown** anchored to the input
-— `useAutocompleteFloating` + `Combobulate.Popover` position it, flip it when
+— `useCombobulateFloating` + `Combobulate.Popover` position it, flip it when
 there's no room below, match its width to the input, cap its height to the
 viewport, and dismiss it on outside-click or Escape (and on select, with
 `closeOnSelect`).
 
 ```tsx
-import { Combobulate, useAutocompleteFloating, useCombobulate } from "combobulate";
+import { Combobulate, useCombobulateFloating, useCombobulate } from "combobulate";
 
 const CITIES = ["Paris", "Madrid", "Berlin" /* …thousands more */];
 
 function CityPicker() {
   const api = useCombobulate({ items: CITIES, getItemId: (c) => c });
-  const floating = useAutocompleteFloating(api, { closeOnSelect: true });
+  const floating = useCombobulateFloating(api, { closeOnSelect: true });
 
   return (
     <Combobulate.Root api={api} label="Cities">
@@ -82,7 +82,7 @@ site; annotate it with your item type (`Combobulate.List<Airport>`, etc.).
 
 Prefer a list that lives in the page flow instead of floating over it (a
 full-page search, a sidebar filter)? Skip the floating layer entirely — render
-`Combobulate.List` directly, no `useAutocompleteFloating` / `Combobulate.Popover`:
+`Combobulate.List` directly, no `useCombobulateFloating` / `Combobulate.Popover`:
 
 ```tsx
 <Combobulate.Root api={api} label="Cities">
@@ -144,6 +144,17 @@ function RemoteCombobox() {
   // …render with Combobulate.* as usual
 }
 ```
+
+## Accessibility
+
+Combobulate implements the [ARIA editable combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/): the input owns focus and `role="combobox"`, options carry `role="option"`, and the active option is tracked with `aria-activedescendant` — so options are reached with the keyboard, not by tabbing into the list.
+
+- **Full-list semantics.** `aria-setsize`/`aria-posinset` reflect the whole filtered list, not the mounted window, so "item 2,847 of 3,300" is announced correctly.
+- **Keyboard navigation.** Arrow keys move one row; `Home`/`End`/`PageUp`/`PageDown` jump across the full virtualized list, scrolling the true target into the DOM before handing it to the screen reader.
+- **Focus-out dismiss.** Moving focus out of the input (Tab, or clicking another control) closes the list.
+- **Result announcements.** A polite live region announces the settled result count (debounced so fast typing doesn't flood the screen reader).
+
+**Virtualization tradeoff:** because only a window of options is mounted, a screen reader's virtual-cursor / rotor sees just the mounted rows — not all 3,300. The list is designed to be **navigated by keyboard** (arrows and jump keys mount rows on demand) rather than browsed with the virtual cursor. Keep this in mind for very large lists.
 
 ## Examples
 
