@@ -102,6 +102,43 @@ full-page search, a sidebar filter)? Skip the floating layer entirely — render
 </Combobulate>
 ```
 
+## Controlled selection
+
+By default the selection is **uncontrolled** — combobulate owns it, seeded by
+`defaultValue` and surfaced through `onChange`. Pass a **`value`** prop to make
+it controlled: your state is the source of truth, and the displayed selection
+always reflects it.
+
+```tsx
+function CityPicker() {
+  const [city, setCity] = useState<string | null>(null);
+  const combobox = useCombobulate({
+    items: CITIES,
+    getItemId: (c) => c,
+    value: city, // controlled: the source of truth
+    onChange: (next) => setCity(next), // fires the whole item (or null)
+  });
+  // …render as usual; external buttons can drive setCity directly
+}
+```
+
+- **`value: T | T[] | null`** — controlled selection (an array for `multiple`).
+  Mutually exclusive with `defaultValue`. A pick fires `onChange(next)` but the
+  UI doesn't change until you update `value` — so the parent can transform,
+  validate, or reject a selection, and external logic (a "swap
+  origin/destination" button, a dependent list) can drive it declaratively.
+- **`onChange(value)`** — receives the whole selected item(s), or `null`, so you
+  can store the id, the label, or the object — whatever you need.
+- **`store.setValue(value)`** — imperatively set/replace/clear the selection
+  (`null` or `[]` clears). Handy for a "Clear" button in the uncontrolled case.
+- **`defaultValue`** — the initial selection for the uncontrolled case.
+
+Object items follow the same identity rule as everywhere else: provide
+`getItemId` (or pass the same object references that live in `items`) so a
+controlled `value` resolves to the right option. See the **Single Controlled**,
+**Multi Controlled**, and **Linked (booking)** examples for the swap-button and
+dependent-list patterns.
+
 ## Filtering
 
 There's one filter with one override. Provide `filterItems(items, query)` to
@@ -172,23 +209,29 @@ identity accessor, not an id format — the returned string just has to be uniqu
 Combobulate implements the [ARIA editable combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/): the input owns focus and `role="combobox"`, options carry `role="option"`, and the active option is tracked with `aria-activedescendant` — so options are reached with the keyboard, not by tabbing into the list.
 
 - **Full-list semantics.** `aria-setsize`/`aria-posinset` reflect the whole filtered list, not the mounted window, so "item 2,847 of 3,300" is announced correctly.
-- **Keyboard navigation.** Arrow keys move one row; `PageUp`/`PageDown` move a page, and `Ctrl`/`Cmd`+`Home`/`End` jump to the ends of the full virtualized list — scrolling the true target into the DOM before handing it to the screen reader. (Bare `Home`/`End` stay caret keys in the input.)
+- **Keyboard navigation.** Arrow keys move one row; `PageUp`/`PageDown` move a page, and `Ctrl`/`Cmd`+`Home`/`End` jump to the ends of the full virtualized list — scrolling the true target into the DOM before handing it to the screen reader. (Bare `Home`/`End` stay caret keys in the input.) `ArrowDown`/`ArrowUp` reopen a closed list.
 - **Focus-out dismiss.** Moving focus out of the input (Tab, or clicking another control) closes the list.
-- **Result announcements.** A polite live region announces the settled result count (debounced so fast typing doesn't flood the screen reader).
+- **Result & selection announcements.** A polite live region announces the settled result count (debounced so fast typing doesn't flood the screen reader), plus multi-select selection changes (which don't otherwise change the input or the count).
 
 **Virtualization tradeoff:** because only a window of options is mounted, a screen reader's virtual-cursor / rotor sees just the mounted rows — not all 3,300. The list is designed to be **navigated by keyboard** (arrows and jump keys mount rows on demand) rather than browsed with the virtual cursor. Keep this in mind for very large lists.
 
 ## Examples
 
-A Vite examples app (sidebar + routes) is the demo surface. Both examples run
-over the same ~3,300 real airports in one virtualized list — the
-virtualization + full-list-ARIA story that's the reason this exists —
-floating by default:
+A Vite examples app (sidebar + routes) is the demo surface — six examples over
+the same ~3,300 real airports in one virtualized list (the virtualization +
+full-list-ARIA story that's the reason this exists), floating by default:
 
-- **Single Select** — picking fills the input with the chosen airport (the
-  committed-value model); reopening shows the whole list with the chosen row marked.
-- **Multi Select** — removable chips carry the selection; the input stays a
-  search box and the list stays open after each pick.
+- **Single / Multi · Uncontrolled** — the default model. Single-select fills the
+  input with the chosen airport (committed value) and reopening shows the whole
+  list with the chosen row marked; multi-select carries the selection as
+  removable chips and keeps the list open after each pick.
+- **Single / Multi · Controlled** — the parent owns the selection (`value` +
+  `onChange`), with a live parent-state readout and Clear / Set buttons driving
+  it from outside.
+- **Themeable** — the same control styled with a CSS-in-JS theme (JS tokens + CSS
+  variables) instead of utility classes; identical look, different strategy.
+- **Linked (booking)** — two controlled comboboxes with a Swap button and
+  origin/destination dependent lists: the payoff of controlled mode.
 
 ```sh
 bun run dev

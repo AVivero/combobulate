@@ -21,7 +21,7 @@ jobs:
       # cover: the Ariakit capture-phase navigation seam (the ArrowDown
       # double-move class of bug) and the virtualization<->activedescendant
       # bridge — both stay green in jsdom even when they regress in a browser.
-      # Do not weaken this gate. Playwright starts Storybook itself (see
-      # playwright.config).
+      # Do not weaken this gate. Playwright starts the Vite examples app itself
+      # (see playwright.config `webServer`).
       - run: bunx playwright install --with-deps chromium webkit
       - run: bun run e2e

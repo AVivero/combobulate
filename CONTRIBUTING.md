@@ -12,48 +12,50 @@ bun run build    # tsup → dist/
 bun run dev
 ```
 
-## ⚠️ Upgrading `@ariakit/react`
+## ⚠️ Upgrading `@ariakit/react` (and the pinned Ariakit store packages)
 
-`@ariakit/react` is pinned `~` (patch-only). It has no public `@ariakit/core` at
-`~0.4.37`; the framework-agnostic combobox store lives in `@ariakit/components`
-and `@ariakit/store`, which `src/core/store.ts` imports directly. Those two are
-pinned **EXACT** (`0.1.10` / `0.1.8`) in `package.json` because they disclaim
-semver (breaking changes in patch/minor) and because the exact pins must match
-`@ariakit/react`'s transitive versions so the install dedupes to a single store
-instance (a duplicate breaks store-identity interop with `<Combobox>`). When you
-bump `@ariakit/react`, re-verify these three pins together — they are
-load-bearing (see the comment above the imports in `src/core/store.ts`).
+All three Ariakit packages are pinned **EXACT** in `package.json`:
+`@ariakit/react` (`0.4.37`), `@ariakit/components` (`0.1.10`), and `@ariakit/store`
+(`0.1.8`). This is deliberate:
 
-## ⚠️ Upgrading `cmdk` or `@tanstack/react-virtual`
+- There's no public `@ariakit/core` at this version; the framework-agnostic
+  combobox store lives in `@ariakit/components` / `@ariakit/store`, which
+  `src/core/store.ts` imports directly. They disclaim semver (breaking changes
+  land in patch/minor), so they're pinned exact.
+- `@ariakit/react` is pinned exact too so its transitive versions of those two
+  packages always match ours — the install must dedupe to a **single** store
+  instance, or the store we hand `<ComboboxProvider>` won't share identity with
+  the one Ariakit's `<Combobox>` drives, silently breaking `aria-activedescendant`,
+  option roles, and selection. A `~`/`^` range would let a consumer's install
+  drift to a version whose internal pins differ. Bump the three together as one
+  lockstep change, and re-verify the dedupe with `bun pm ls`.
 
-These two are pinned with `~` (patch-only) in `package.json` **on purpose**, not
-by accident.
+## ⚠️ Load-bearing couplings to Ariakit / react-virtual internals
 
-Combobulate's jump-key navigation (Home / End / PageUp / PageDown over a
-virtualized list) works around a cmdk limitation: cmdk only recomputes the
-input's `aria-activedescendant` from its **own** pointer/keyboard handlers, never
-from a controlled `<Command value>` change. `src/core/use-combobulate.ts`
-(`onInputKeyDown`) therefore synthesizes DOM events — a `scroll` event to force
-react-virtual's synchronous range commit, then a `pointermove` (with a
-neighbour-row "wiggle" to defeat cmdk's `Object.is` value guard) — so cmdk's own
-recompute path runs. Every one of those lines is commented with *why* it exists;
-read them before touching that function.
+Two things couple to **internal** behavior of the underlying libraries. Both are
+guarded only by the real-browser e2e suite (the unit tests use fakes and stay
+green even if these regress), so **when you bump `@ariakit/react` or
+`@tanstack/react-virtual` you MUST run `bun run e2e`** (cross-browser) and confirm
+it's green — do not weaken the assertions.
 
-This couples to **internal** behavior of both libraries:
+1. **Capture-phase navigation** (`src/core/primitives.tsx`). combobulate's key
+   handler runs on `onKeyDownCapture`, not bubble `onKeyDown`. In the
+   aria-activedescendant pattern Ariakit installs a capture-phase key proxy that
+   moves its own `activeId` before a bubble handler would run — so navigating in
+   bubble would double-step every ArrowDown. We intercept owned keys in capture
+   (`preventDefault` + `stopPropagation`) to be the sole mover; unowned keys fall
+   through. Enter-to-select is delegated to Ariakit re-dispatching a click to the
+   active option (the `Item`'s `onClick` runs `store.select`).
 
-- cmdk's `selectedItemId` recompute path and its value-guard (`cmdk 1.1.x`).
-- react-virtual's synchronous `flushSync`-on-scroll-notify (`@tanstack/react-virtual 3.14.x`).
+2. **The scroll-then-set jump bridge** (`src/core/use-combobulate.ts`,
+   `requestActive` / `pendingActiveRef`). Ariakit only highlights *mounted* rows,
+   so a jump target outside the virtualized window is scrolled into view first,
+   then committed active once its row mounts. This is the whole differentiator:
+   full-list `aria-setsize` / `aria-posinset` and jump keys
+   (`Ctrl`/`Cmd`+`Home`/`End`, `PageUp`/`PageDown`) that target the true ends of
+   ~3,300 rows, not the mounted window.
 
-The **unit tests do not cover this coupling** — they assert `activeIndex`, which
-the fallback path satisfies, so `bun test` can stay green even if the real
-`aria-activedescendant` behavior regresses. Only **`e2e/jump-keys.e2e.ts`**
-exercises the real browser behavior.
-
-**So: when you bump either dependency, you MUST run `bun run e2e` (at minimum
-`e2e/jump-keys.e2e.ts`) and confirm all three jump-key tests still pass.** They
-assert that End lands on the true last item (`aria-posinset === aria-setsize`
-over ~3,300 rows), Home on the first, and PageDown a page down — the library's
-differentiator. If they fail after an upgrade, the coupling in `onInputKeyDown`
-needs re-verification against the new internals; do not weaken the assertions.
-
-CI must run `bun run e2e` as a required check for the same reason.
+`e2e/jump-keys.e2e.ts` and `e2e/virtualized-combobox.e2e.ts` assert this end to
+end (posinset monotonic across the window, End lands on the true last item, the
+active row stays mounted and in view). CI runs `bun run e2e` as a required check
+for the same reason.
