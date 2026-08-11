@@ -26,3 +26,19 @@ test("options expose chosen state via aria-checked", async ({ page }) => {
   await paris.click();
   await expect(page.getByRole("option", { name: /Paris/ })).toHaveAttribute("aria-checked", "true");
 });
+
+// aria-selected marks the chosen value in multi-select too (distinct from the
+// active highlight), and it survives a close/reopen — the chosen row is still
+// flagged when the full list comes back.
+test("the chosen option is marked aria-selected after reopening", async ({ page }) => {
+  await page.goto(STORY);
+  const input = page.getByRole("combobox");
+  await input.click();
+  await page.getByRole("option", { name: /Paris/ }).click();
+  await input.press("Escape"); // close
+  await input.click(); // reopen — full list, Paris still chosen
+  await expect(page.getByRole("option", { name: /Paris/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});

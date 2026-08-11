@@ -64,10 +64,22 @@ function CombobulateRoot<T>({ store, label, children }: CombobulateRootProps<T>)
  * `aria-expanded` (now correct — cmdk hardcoded it true) and
  * `aria-activedescendant`, and reads the input value from the store.
  *
+ * Navigation (`store.onInputKeyDown`) runs in the CAPTURE phase
+ * (`onKeyDownCapture`), not the bubble `onKeyDown`. In the aria-activedescendant
+ * pattern Ariakit's composite installs a capture-phase key proxy that
+ * re-dispatches arrow/page/home/end to the active item — moving Ariakit's own
+ * `activeId` by one BEFORE a bubble handler ever runs. If combobulate navigated
+ * in bubble, it would read that already-moved state and step again: every
+ * ArrowDown would jump two rows. Ariakit's proxy calls our capture handler first
+ * and bails on `defaultPrevented`, so intercepting an owned key here (we
+ * `preventDefault` + `stopPropagation` on exactly the keys `nextIndex` claims)
+ * makes combobulate the SOLE mover; unowned keys (Escape, printables) fall
+ * through untouched.
+ *
  * Handlers from combobulate and any same-named handler in `props` are composed
  * (ours first, then the consumer's) rather than one clobbering the other — this
  * is what lets the floating layer's Escape-to-dismiss `onKeyDown` sit alongside
- * the navigation interceptor when consumers spread `{...floating.referenceProps}`.
+ * combobulate's navigation when consumers spread `{...floating.referenceProps}`.
  */
 const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function Input(props, ref) {
@@ -98,9 +110,9 @@ const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputEl
           },
           props.onBlur,
         )}
-        onKeyDown={compose<[React.KeyboardEvent<HTMLInputElement>]>(
+        onKeyDownCapture={compose<[React.KeyboardEvent<HTMLInputElement>]>(
           store.onInputKeyDown,
-          props.onKeyDown,
+          props.onKeyDownCapture,
         )}
         onChange={compose<[React.ChangeEvent<HTMLInputElement>]>((event) => {
           store.setInputValue(event.target.value);

@@ -34,7 +34,7 @@ test("reopening after a pick shows the list, not an empty 'no match'", async ({ 
   expect(await page.getByRole("option").count()).toBeGreaterThan(0);
   await expect(page.getByText("No airports match")).toHaveCount(0);
   // the picked option is visibly marked as chosen
-  await expect(page.locator("[cmdk-item][data-chosen]")).toHaveCount(1);
+  await expect(page.locator('[role="option"][data-chosen]')).toHaveCount(1);
 });
 
 // Clearing the whole input (backspacing it empty) unselects: the input stays
@@ -47,9 +47,9 @@ test("clearing the input to empty unselects (does not revert on close)", async (
   await page.getByRole("option", { name: "Paris" }).click();
   await expect(input).toHaveValue("Paris"); // picked
   await input.click(); // reopen (shows the full list, Paris chosen)
-  await expect(page.locator("[cmdk-item][data-chosen]")).toHaveCount(1);
+  await expect(page.locator('[role="option"][data-chosen]')).toHaveCount(1);
   await input.fill(""); // backspace the whole thing
-  await expect(page.locator("[cmdk-item][data-chosen]")).toHaveCount(0); // unselected
+  await expect(page.locator('[role="option"][data-chosen]')).toHaveCount(0); // unselected
   await input.press("Escape"); // close
   await expect(input).toHaveValue(""); // stays empty — NOT reverted to "Paris"
 });

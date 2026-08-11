@@ -16,5 +16,5 @@ jobs:
       # e2e is the ONLY guard for the synthetic-pointer jump-key coupling
       # (unit tests stay green even if aria-activedescendant regresses), so it
       # must run in CI. Playwright starts Storybook itself (see playwright.config).
-      - run: bunx playwright install --with-deps chromium
+      - run: bunx playwright install --with-deps chromium webkit
       - run: bun run e2e

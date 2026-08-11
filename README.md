@@ -1,11 +1,13 @@
 # combobulate
 
-**A headless, accessible, properly virtualized combobox — built on [cmdk](https://cmdk.paco.me).**
+**A headless, accessible, properly virtualized combobox — built on [Ariakit](https://ariakit.org).**
 
-Combobulate is the integration layer, not another combobox engine. cmdk owns
-keyboard navigation, option roles, and the highlighted item. TanStack Virtual
-owns windowing. Floating UI owns positioning. Combobulate owns the seam none of
-them cover: **making a virtualized list actually accessible.**
+Combobulate is the integration layer, not another combobox engine. Ariakit owns
+the combobox shell: option roles, `role="combobox"`, `aria-expanded`, and the
+`aria-activedescendant` highlight. TanStack Virtual owns windowing. Floating UI
+owns positioning. Combobulate owns the seam none of them cover: **making a
+virtualized list actually accessible** — driving Ariakit's active item across
+the full list, and the committed-value selection model on top.
 
 ## Why
 
@@ -17,14 +19,15 @@ row that happens to be mounted rather than the last row that exists.
 
 Combobulate closes that gap:
 
-- **The active row is always mounted.** cmdk moves the highlight, combobulate
-  scrolls that index into view, so `aria-activedescendant` always resolves.
+- **The active row is always mounted.** Combobulate owns navigation over the
+  full list: it scrolls the target index into view, then hands Ariakit the id to
+  make active, so `aria-activedescendant` always resolves.
 - **Full-list ARIA.** `aria-setsize`/`aria-posinset` come from the filtered data,
   not the mounted window.
-- **Correct jump keys.** `Home`/`End`/`PageUp`/`PageDown` target the whole list —
-  scroll the true target into mount, then hand cmdk the value. This is verified
-  end-to-end in a real browser; it's the thing most cmdk-based comboboxes don't
-  get right once the list is virtualized.
+- **Correct jump keys.** `Ctrl`/`Cmd`+`Home`/`End` and `PageUp`/`PageDown` target
+  the whole list — scroll the true target into mount, then set it active. This is
+  verified end-to-end in a real browser; it's the thing most virtualized
+  comboboxes don't get right.
 
 ## Install
 
@@ -32,8 +35,8 @@ Combobulate closes that gap:
 bun add combobulate
 ```
 
-Only `react` and `react-dom` are peers. cmdk, TanStack Virtual, and Floating UI
-come along as regular dependencies — one install, no extra peer setup.
+Only `react` and `react-dom` are peers. Ariakit, TanStack Virtual, and Floating
+UI come along as regular dependencies — one install, no extra peer setup.
 
 ## Use
 
@@ -150,7 +153,7 @@ function RemoteCombobox() {
 Combobulate implements the [ARIA editable combobox](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/): the input owns focus and `role="combobox"`, options carry `role="option"`, and the active option is tracked with `aria-activedescendant` — so options are reached with the keyboard, not by tabbing into the list.
 
 - **Full-list semantics.** `aria-setsize`/`aria-posinset` reflect the whole filtered list, not the mounted window, so "item 2,847 of 3,300" is announced correctly.
-- **Keyboard navigation.** Arrow keys move one row; `Home`/`End`/`PageUp`/`PageDown` jump across the full virtualized list, scrolling the true target into the DOM before handing it to the screen reader.
+- **Keyboard navigation.** Arrow keys move one row; `PageUp`/`PageDown` move a page, and `Ctrl`/`Cmd`+`Home`/`End` jump to the ends of the full virtualized list — scrolling the true target into the DOM before handing it to the screen reader. (Bare `Home`/`End` stay caret keys in the input.)
 - **Focus-out dismiss.** Moving focus out of the input (Tab, or clicking another control) closes the list.
 - **Result announcements.** A polite live region announces the settled result count (debounced so fast typing doesn't flood the screen reader).
 
@@ -178,7 +181,7 @@ the in-flow (non-floating) layout — are covered by the **Filtering** and
 
 A nested-tree layer (expand/collapse, virtualized `role="tree"`,
 select-all-under-node) is **not shipped** — it needs a fresh design pass on top
-of the cmdk-backed core.
+of the Ariakit-backed core.
 
 ## License
 
