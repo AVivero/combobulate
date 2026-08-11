@@ -6,6 +6,30 @@ afterEach(() => cleanup());
 
 const ITEMS = ["Paris", "Madrid", "Berlin"];
 
+/** Minimal stand-in for the parts of React's KeyboardEvent `onInputKeyDown` reads. */
+function keyEvent(key: string, mod: Partial<{ ctrlKey: boolean; metaKey: boolean }> = {}) {
+  let defaultPrevented = false;
+  let propagationStopped = false;
+  return {
+    key,
+    ctrlKey: false,
+    metaKey: false,
+    ...mod,
+    preventDefault: () => {
+      defaultPrevented = true;
+    },
+    stopPropagation: () => {
+      propagationStopped = true;
+    },
+    get defaultPrevented() {
+      return defaultPrevented;
+    },
+    get propagationStopped() {
+      return propagationStopped;
+    },
+  };
+}
+
 test("store: open state round-trips", () => {
   const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
   expect(store.getState().isOpen).toBe(false);
@@ -36,4 +60,47 @@ test("store: itemValue is the id verbatim; activeIndex maps back", () => {
   expect(store.itemValue("Madrid", 1)).toBe("Madrid");
   act(() => store.setActiveValue("Madrid"));
   expect(store.getState().activeIndex).toBe(1);
+});
+
+test("store: onInputKeyDown ArrowDown advances activeIndex via the default requestActive", () => {
+  const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
+  act(() => store.setActiveValue(store.itemValue("Paris", 0)));
+  expect(store.getState().activeIndex).toBe(0);
+
+  const event = keyEvent("ArrowDown");
+  act(() => store.onInputKeyDown(event as never));
+
+  // The default `_internal.requestActive` commits immediately (no
+  // virtualizer involved for a headless store), so this settles synchronously.
+  expect(store.getState().activeIndex).toBe(1);
+  expect(event.defaultPrevented).toBe(true);
+  expect(event.propagationStopped).toBe(true);
+});
+
+test("store: onInputKeyDown bare Home/End are NOT owned (caret passthrough)", () => {
+  const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
+  act(() => store.setActiveValue(store.itemValue("Madrid", 1)));
+
+  const home = keyEvent("Home");
+  act(() => store.onInputKeyDown(home as never));
+  expect(home.defaultPrevented).toBe(false);
+  expect(home.propagationStopped).toBe(false);
+  expect(store.getState().activeIndex).toBe(1); // untouched
+
+  const end = keyEvent("End");
+  act(() => store.onInputKeyDown(end as never));
+  expect(end.defaultPrevented).toBe(false);
+  expect(store.getState().activeIndex).toBe(1); // untouched
+});
+
+test("store: onInputKeyDown Ctrl+End jumps to the last item", () => {
+  const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
+  act(() => store.setActiveValue(store.itemValue("Paris", 0)));
+
+  const event = keyEvent("End", { ctrlKey: true });
+  act(() => store.onInputKeyDown(event as never));
+
+  expect(store.getState().activeIndex).toBe(ITEMS.length - 1);
+  expect(event.defaultPrevented).toBe(true);
+  expect(event.propagationStopped).toBe(true);
 });

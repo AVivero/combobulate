@@ -12,8 +12,14 @@ test("ArrowDown moves +1 and clamps at the end", () => {
   expect(nextIndex(0, K("ArrowDown"), { count: 3, page: 10 })).toBe(1);
   expect(nextIndex(2, K("ArrowDown"), { count: 3, page: 10 })).toBe(2);
 });
-test("ArrowUp from -1 goes to first", () => {
+test("ArrowDown from -1 goes to first", () => {
   expect(nextIndex(-1, K("ArrowDown"), { count: 3, page: 10 })).toBe(0);
+});
+test("ArrowUp moves -1 and clamps at the start", () => {
+  expect(nextIndex(5, K("ArrowUp"), { count: 100, page: 10 })).toBe(4);
+  expect(nextIndex(0, K("ArrowUp"), { count: 100, page: 10 })).toBe(0);
+  // -1 (nothing active) clamps the same as 0: Math.max(0, -1 - 1) -> 0.
+  expect(nextIndex(-1, K("ArrowUp"), { count: 100, page: 10 })).toBe(0);
 });
 test("PageDown/PageUp move by page, clamped", () => {
   expect(nextIndex(0, K("PageDown"), { count: 100, page: 10 })).toBe(10);
