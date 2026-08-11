@@ -12,13 +12,5 @@
     "declaration": true,
     "types": ["bun", "react", "react-dom"]
   },
-  "include": [
-    "src",
-    "examples",
-    "test-setup.ts",
-    "tsup.config.ts",
-    "e2e",
-    "playwright.config.ts",
-    ".storybook"
-  ]
+  "include": ["src", "examples", "test-setup.ts", "tsup.config.ts", "e2e", "playwright.config.ts"]
 }
