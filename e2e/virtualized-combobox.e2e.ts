@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const STORY = "/iframe.html?id=combobulate-world-airports--default&viewMode=story";
+const STORY = "/iframe.html?id=combobulate-single-select--default&viewMode=story";
 
 test("mounts only a window of the ~3,300 airports", async ({ page }) => {
   await page.goto(STORY);

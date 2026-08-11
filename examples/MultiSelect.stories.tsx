@@ -1,16 +1,26 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Combobulate } from "../src/index";
 import { FloatingCombobox } from "./FloatingCombobox";
+import { airportLabel, airportSearchText } from "./data/airport-label";
+import airports from "./data/airports.json";
+import type { Airport } from "./data/types";
 import { useDemoCombobox } from "./useDemoCombobox";
 import "./demo.css";
 
-const CITIES = ["Paris", "Madrid", "Berlin", "Málaga", "Lisbon", "Rome", "Vienna", "Prague"];
+const AIRPORTS = airports as Airport[];
 
+/**
+ * Multi-select over the same ~3,300 airports. Chips (in the page flow, part of
+ * the control) carry the selection so the input stays a search box; the list
+ * stays open after each pick, and chosen rows are marked in the list.
+ */
 function MultiSelect() {
   const { store, inputProps } = useDemoCombobox({
-    items: CITIES,
+    items: AIRPORTS,
     multiple: true,
-    getItemId: (c) => c,
+    getItemId: (a) => a.iata,
+    getSearchText: airportSearchText,
+    estimateSize: () => 44,
   });
   const selectedItems = store.useState("selectedItems");
   return (
@@ -21,22 +31,23 @@ function MultiSelect() {
         data-testid="chips"
         style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}
       >
-        {selectedItems.map((city) => (
-          <button key={city} type="button" onClick={() => store.select(city)}>
-            {city} ✕
+        {selectedItems.map((airport) => (
+          <button key={airport.iata} type="button" onClick={() => store.select(airport)}>
+            {airport.iata} ✕
           </button>
         ))}
       </div>
       <FloatingCombobox
         store={store}
         inputProps={inputProps}
-        label="Cities"
-        placeholder="Pick several…"
-        emptyMessage="No results"
+        label="Airports"
+        placeholder="Pick several airports…"
+        emptyMessage="No airports match"
+        maxHeight={240}
       >
         {(item, index) => (
           <Combobulate.Item item={item} index={index}>
-            {item}
+            <span>{airportLabel(item)}</span>
           </Combobulate.Item>
         )}
       </FloatingCombobox>
