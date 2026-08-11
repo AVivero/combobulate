@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Combobulate } from "../index";
+import { Combobulate } from "../src/index";
 import { FloatingCombobox } from "./FloatingCombobox";
 import { airportLabel, airportSearchText } from "./data/airport-label";
 import airports from "./data/airports.json";

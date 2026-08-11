@@ -1,5 +1,5 @@
 import { type FocusEvent, useCallback } from "react";
-import { type CombobulateApi, type UseCombobulateOptions, useCombobulate } from "../index";
+import { type CombobulateApi, type UseCombobulateOptions, useCombobulate } from "../src/index";
 
 /**
  * Assembles the headless primitives into a real-combobox experience for the
