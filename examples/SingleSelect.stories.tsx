@@ -1,23 +1,29 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { type FocusEvent, useCallback } from "react";
 import { Combobulate, useCombobulate, useCombobulateFloating } from "../src/index";
-import { airportLabel, airportSearchText } from "./data/airport-label";
 import airports from "./data/airports.json";
 import type { Airport } from "./data/types";
 
 const AIRPORTS = airports as Airport[];
 
+// Row label. ~50 airports have a blank `city`; fall back to `country` so no row
+// renders a dangling "— Name (CODE)".
+const airportLabel = (a: Airport) => `${a.city || a.country} — ${a.name} (${a.iata})`;
+// Search text covering every field, so city-less airports stay findable.
+const airportSearch = (a: Airport) => [a.city, a.name, a.iata, a.country].filter(Boolean).join(" ");
+
 /**
  * Single-select over ~3,300 real airports, styled **entirely with Tailwind** —
  * including the active (hover/keyboard) and chosen row states via `data-*` /
  * `aria-*` variants. The whole integration lives in this one component (no
- * shared helpers) so you can read the wiring top to bottom.
+ * shared helpers) so you can read the wiring top to bottom. Same look as the
+ * Multi Select example; only the styling strategy differs.
  */
 function SingleSelect() {
   const store = useCombobulate<Airport>({
     items: AIRPORTS,
     getItemId: (a) => a.iata,
-    getSearchText: airportSearchText,
+    getSearchText: airportSearch,
     itemToInputValue: airportLabel, // committed-value single-select (fills on pick)
     estimateSize: () => 44,
   });
