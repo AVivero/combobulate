@@ -20,8 +20,7 @@ test("options report their absolute position in the full filtered list", async (
   expect(Number(setsize)).toBeGreaterThan(3000);
 });
 
-// aria-expanded is Ariakit's now (cmdk hardcoded it true): closed -> "false",
-// open -> "true".
+// aria-expanded reflects open state: closed -> "false", open -> "true".
 test("aria-expanded tracks open state", async ({ page }) => {
   await page.goto(STORY);
   const input = page.getByRole("combobox");

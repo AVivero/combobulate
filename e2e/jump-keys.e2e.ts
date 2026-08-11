@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 const STORY = "/iframe.html?id=combobulate-world-airports--default&viewMode=story";
 
@@ -7,7 +7,7 @@ const STORY = "/iframe.html?id=combobulate-world-airports--default&viewMode=stor
 // Resolve the option `aria-activedescendant` currently points at. The far-jump
 // bridge scrolls the target into the DOM and commits it active once its row
 // mounts, so this can be briefly null right after the press — callers poll it.
-const activePosinset = (page: import("@playwright/test").Page) => async () => {
+const activePosinset = (page: Page) => async () => {
   const input = page.getByRole("combobox");
   const activeId = await input.getAttribute("aria-activedescendant");
   if (!activeId) return null;

@@ -13,8 +13,11 @@ jobs:
       - run: bun run typecheck
       - run: bun test
       - run: bun run build
-      # e2e is the ONLY guard for the synthetic-pointer jump-key coupling
-      # (unit tests stay green even if aria-activedescendant regresses), so it
-      # must run in CI. Playwright starts Storybook itself (see playwright.config).
+      # e2e is the sole guard for two real-browser couplings unit tests can't
+      # cover: the Ariakit capture-phase navigation seam (the ArrowDown
+      # double-move class of bug) and the virtualization<->activedescendant
+      # bridge — both stay green in jsdom even when they regress in a browser.
+      # Do not weaken this gate. Playwright starts Storybook itself (see
+      # playwright.config).
       - run: bunx playwright install --with-deps chromium webkit
       - run: bun run e2e
