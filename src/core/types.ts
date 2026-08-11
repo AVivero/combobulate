@@ -15,8 +15,8 @@ export type UseCombobulateOptions<T> = {
   getSearchText?: (item: T) => string;
   /**
    * Accessor for an item's stable id. Falls back to the positional index.
-   * Ids must be unique — they become cmdk item values (see
-   * {@link CombobulateApi.itemValue}).
+   * Ids must be unique — they become the Ariakit option ids (see
+   * {@link CombobulateStore.itemValue}).
    */
   getItemId?: (item: T) => string;
   /** Custom filter. Defaults to a normalized substring match. */

@@ -14,7 +14,8 @@ import {
   createComboboxStore,
 } from "@ariakit/components/combobox/combobox-store";
 import { subscribe } from "@ariakit/store";
-import { type KeyboardEvent, useSyncExternalStore } from "react";
+import type { Virtualizer } from "@tanstack/react-virtual";
+import { type KeyboardEvent, type RefObject, useSyncExternalStore } from "react";
 import { defaultFilterItems, defaultGetSearchText, isSameItem, toChangeValue } from "./item-utils";
 import { PAGE_SIZE, nextIndex } from "./navigation";
 import type { CombobulateState, CombobulateStore, UseCombobulateOptions } from "./types";
@@ -52,12 +53,29 @@ export type CombobulateStoreInternal<T> = CombobulateStore<T> & {
      * `filteredItems`) the active item. The default here is a safe, immediate
      * `setActiveId` — correct whenever `target` is already mounted (or there
      * is no virtualized window at all, e.g. this store used headless in a
-     * test). A later task's hook overwrites this field with the real bridge:
-     * scroll unmounted targets into view first, deferring the `setActiveId`
-     * until the target's row actually mounts. Mutable (not readonly) so that
-     * override can happen after the store is created.
+     * test). The hook (`useCombobulate`) overwrites this field with the real
+     * bridge: scroll unmounted targets into view first, deferring the
+     * `setActiveId` until the target's row actually mounts. Mutable (not
+     * readonly) so that override can happen after the store is created.
      */
     requestActive: (target: number) => void;
+    /**
+     * The virtualizer and its scroll container ref. Created in React by the
+     * hook (they can't exist outside it) and injected here so the `List`
+     * primitive can drive the virtual window from the store handle alone.
+     * `null`/empty until the hook injects them (e.g. a headless store).
+     */
+    virtualizer: Virtualizer<HTMLElement, Element> | null;
+    scrollRef: RefObject<HTMLElement | null>;
+    /**
+     * Push changed `items`/`loading` props into the store. `createCombobulateStore`
+     * captures the initial values, so the hook calls these when the consumer
+     * passes new ones. Both notify subscribers (a plain items/loading change
+     * touches no Ariakit state, so it wouldn't otherwise re-render React), and
+     * `setItems` rebuilds the value->item map and busts the filter cache.
+     */
+    setItems: (items: T[]) => void;
+    setLoading: (loading: boolean) => void;
   };
 };
 
@@ -82,19 +100,31 @@ export function createCombobulateStore<T>(
   options: UseCombobulateOptions<T>,
 ): CombobulateStoreInternal<T> {
   const {
-    items,
     getItemId,
     getSearchText = defaultGetSearchText as (item: T) => string,
     filterItems,
     itemToInputValue,
     multiple = false,
-    loading = false,
     defaultValue = null,
     onChange,
     onInputChange,
     onOpenChange,
     defaultOpen = false,
   } = options;
+
+  /**
+   * `items`/`loading` are mutable: the hook pushes changed props in via
+   * `_internal.setItems`/`setLoading` (see below), so every derivation reads
+   * these current values rather than the captured initial ones.
+   */
+  let currentItems = options.items;
+  let currentLoading = options.loading ?? false;
+
+  /** Notified on items/loading changes (which touch no Ariakit state). */
+  const listeners = new Set<() => void>();
+  const emit = (): void => {
+    for (const listener of listeners) listener();
+  };
 
   /**
    * Used verbatim (no case-folding): ids differing only in case must not
@@ -104,15 +134,19 @@ export function createCombobulateStore<T>(
     getItemId ? getItemId(item) : String(index);
 
   const valueOfItem = (item: T): string => {
-    const index = items.findIndex((candidate) => isSameItem(candidate, item, getItemId));
+    const index = currentItems.findIndex((candidate) => isSameItem(candidate, item, getItemId));
     return itemValue(item, index);
   };
 
   /** Reverse map value -> item, for turning `selectedValue` back into items. */
-  const itemByValue = new Map<string, T>();
-  items.forEach((item, index) => {
-    itemByValue.set(itemValue(item, index), item);
-  });
+  const buildItemByValue = (list: T[]): Map<string, T> => {
+    const map = new Map<string, T>();
+    list.forEach((item, index) => {
+      map.set(itemValue(item, index), item);
+    });
+    return map;
+  };
+  let itemByValue = buildItemByValue(currentItems);
   const itemsForValues = (values: string[]): T[] => {
     const result: T[] = [];
     for (const value of values) {
@@ -170,7 +204,7 @@ export function createCombobulateStore<T>(
    */
   let cachedFilterValue: string | undefined;
   let cachedFilterSelectedItems: T[] | undefined;
-  let cachedFilteredItems: T[] = items;
+  let cachedFilteredItems: T[] = currentItems;
   const filteredItems = (): T[] => {
     const value = combobox.getState().value;
     const selected = selectedItems();
@@ -184,10 +218,10 @@ export function createCombobulateStore<T>(
     // value, not a search — show the whole list instead of filtering to it.
     const isShowingSelection = committed !== "" && value === committed;
     cachedFilteredItems = isShowingSelection
-      ? items
+      ? currentItems
       : filterItems
-        ? filterItems(items, value)
-        : defaultFilterItems(items, value, getSearchText);
+        ? filterItems(currentItems, value)
+        : defaultFilterItems(currentItems, value, getSearchText);
     return cachedFilteredItems;
   };
 
@@ -206,14 +240,20 @@ export function createCombobulateStore<T>(
       activeIndex,
       selectedItems: selectedItems(),
       filteredItems: filteredItemsSnapshot,
-      loading,
+      loading: currentLoading,
       multiple,
     };
   };
 
   const subscribeToStore = (onStoreChange: () => void): (() => void) => {
+    // Subscribe to BOTH the Ariakit store (open/input/active/selection) and
+    // our local emitter (items/loading), so a change on either re-renders.
     const unsubscribe = subscribe(combobox, null, onStoreChange);
-    return () => unsubscribe?.();
+    listeners.add(onStoreChange);
+    return () => {
+      unsubscribe?.();
+      listeners.delete(onStoreChange);
+    };
   };
 
   const useState = <K extends keyof CombobulateState<T>>(key: K): CombobulateState<T>[K] => {
@@ -296,7 +336,15 @@ export function createCombobulateStore<T>(
    */
   const internal: CombobulateStoreInternal<T>["_internal"] = {
     combobox,
-    config: { items, getItemId, getSearchText, filterItems, itemToInputValue, multiple, loading },
+    config: {
+      items: currentItems,
+      getItemId,
+      getSearchText,
+      filterItems,
+      itemToInputValue,
+      multiple,
+      loading: currentLoading,
+    },
     commitOrRevert,
     // Safe default: jump straight to `target`, no virtualized window to wait
     // on. Correct standalone (this store used headlessly, e.g. in tests) and
@@ -305,6 +353,37 @@ export function createCombobulateStore<T>(
       const item = filteredItems()[target];
       if (item === undefined) return;
       combobox.setState("activeId", itemValue(item, target));
+    },
+    // Injected by the hook (see `useCombobulate`); null/empty headlessly.
+    virtualizer: null,
+    scrollRef: { current: null },
+    setItems: (next: T[]): void => {
+      if (next === currentItems) return;
+      /**
+       * Compare by CONTENT, not reference: a consumer that passes a fresh
+       * inline `items` array on every render must not trigger a re-render each
+       * time (that would loop through the hook's sync effect). Adopt the new
+       * reference regardless so the cheap `===` fast-path holds next time, but
+       * only rebuild + notify when the contents actually changed.
+       */
+      const sameContent =
+        next.length === currentItems.length &&
+        next.every((item, index) => item === currentItems[index]);
+      currentItems = next;
+      if (sameContent) return;
+      internal.config.items = next;
+      itemByValue = buildItemByValue(next);
+      // The item universe changed: force the derived caches to recompute.
+      cachedFilterValue = undefined;
+      cachedFilterSelectedItems = undefined;
+      cachedSelectedValue = undefined;
+      emit();
+    },
+    setLoading: (next: boolean): void => {
+      if (next === currentLoading) return;
+      currentLoading = next;
+      internal.config.loading = next;
+      emit();
     },
   };
 
