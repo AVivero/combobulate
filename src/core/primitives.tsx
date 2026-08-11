@@ -1,5 +1,5 @@
 import { Command } from "cmdk";
-import { type ReactNode, forwardRef } from "react";
+import { type ReactNode, forwardRef, useEffect, useState } from "react";
 import { CombobulateProvider, useCombobulateContext } from "./context";
 import type { CombobulateApi } from "./types";
 
@@ -74,6 +74,20 @@ const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputEl
         onFocus={compose<[React.FocusEvent<HTMLInputElement>]>(
           () => api.setOpen(true),
           props.onFocus,
+        )}
+        onBlur={compose<[React.FocusEvent<HTMLInputElement>]>(
+          /**
+           * Focus leaving the combobox (Tab-away, or clicking another control)
+           * closes the popup. In the aria-activedescendant pattern the list
+           * options aren't focusable, so blur only fires on a genuine focus-out.
+           * `relatedTarget` is null when focus lands on a non-focusable/pointer
+           * target (e.g. the popover chrome) — those are left to the floating
+           * layer's outside-press dismiss so an in-list click doesn't close.
+           */
+          (event) => {
+            if (event.relatedTarget) api.setOpen(false);
+          },
+          props.onBlur,
         )}
         onKeyDown={compose<[React.KeyboardEvent<HTMLInputElement>]>(
           api.onInputKeyDown,
@@ -185,11 +199,30 @@ function Empty({ children }: { children: ReactNode }) {
 }
 
 /**
+ * How long the live region waits for the count to settle before announcing.
+ * Fast typing changes the result count on every keystroke; without this, each
+ * change queues another polite announcement and the screen reader trails the
+ * user with "12 results… 8 results… 5 results".
+ */
+const ANNOUNCE_DEBOUNCE_MS = 200;
+
+/**
  * Visually-hidden polite live region announcing result counts and loading
- * state. The wrapper is off-screen but readable by assistive tech.
+ * state. The wrapper is off-screen but readable by assistive tech. Content
+ * changes are debounced so rapid typing doesn't flood the polite queue;
+ * clearing (on close) is immediate, and the current value shows on mount.
  */
 function LiveRegion() {
   const api = useCombobulateContext();
+  const [message, setMessage] = useState(api.announcement);
+  useEffect(() => {
+    if (api.announcement === "") {
+      setMessage("");
+      return;
+    }
+    const id = setTimeout(() => setMessage(api.announcement), ANNOUNCE_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [api.announcement]);
   return (
     // `<output>` carries an implicit `role="status"` (see `Empty` above),
     // satisfying Biome's `useSemanticElements` rule.
@@ -208,7 +241,7 @@ function LiveRegion() {
         border: 0,
       }}
     >
-      {api.announcement}
+      {message}
     </output>
   );
 }

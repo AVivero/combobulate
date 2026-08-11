@@ -4,13 +4,13 @@ import { Combobulate } from "../core/primitives";
 import { useCombobulate } from "../core/use-combobulate";
 import { stubElementLayout } from "../test-utils/stub-element-layout";
 import { Popover } from "./floating-primitives";
-import { useAutocompleteFloating } from "./use-floating";
+import { useCombobulateFloating } from "./use-floating";
 
 afterEach(() => cleanup());
 
 function Demo({ open }: { open: boolean }) {
   const api = useCombobulate({ items: ["Paris"], defaultOpen: open });
-  const floating = useAutocompleteFloating(api);
+  const floating = useCombobulateFloating(api);
   return (
     <Combobulate.Root api={api}>
       <Combobulate.Input ref={floating.reference} {...floating.referenceProps} />

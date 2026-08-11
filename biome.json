@@ -14,7 +14,7 @@
       "test-results",
       ".claude",
       "storybook-static",
-      "src/stories/data/*.json"
+      "examples/data/*.json"
     ]
   }
 }

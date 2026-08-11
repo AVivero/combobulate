@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { useCombobulateContext } from "../core/context";
-import type { AutocompleteFloating } from "./types";
+import type { CombobulateFloating } from "./types";
 
 /** Props for {@link Popover}. */
 export type PopoverProps = {
-  /** The value from `useAutocompleteFloating`. */
-  floating: AutocompleteFloating;
+  /** The value from `useCombobulateFloating`. */
+  floating: CombobulateFloating;
   children: ReactNode;
 };
 

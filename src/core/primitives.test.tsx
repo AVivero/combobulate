@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { stubElementLayout } from "../test-utils/stub-element-layout";
 import { Combobulate } from "./primitives";
 import { useCombobulate } from "./use-combobulate";
@@ -73,4 +73,30 @@ test("Empty renders only when nothing matches", () => {
 test("LiveRegion announces the result count", () => {
   render(<Harness items={["Paris"]} />);
   expect(screen.getByRole("status").textContent).toBe("1 result");
+});
+
+test("focus-out (blur to another control) closes the popup", () => {
+  render(
+    <>
+      <Harness items={["Paris", "Berlin"]} />
+      <button type="button">outside</button>
+    </>,
+  );
+  expect(screen.getAllByRole("option").length).toBeGreaterThan(0);
+  const input = screen.getByRole("combobox");
+  const outside = screen.getByRole("button", { name: "outside" });
+  fireEvent.blur(input, { relatedTarget: outside });
+  expect(screen.queryAllByRole("option")).toHaveLength(0);
+});
+
+test("LiveRegion debounces count changes rather than flooding on each keystroke", async () => {
+  render(<Harness items={["Paris", "Madrid", "Berlin"]} />);
+  const status = screen.getByRole("status");
+  // Mount shows the current count immediately.
+  expect(status.textContent).toBe("3 results");
+  fireEvent.change(screen.getByRole("combobox"), { target: { value: "par" } });
+  // Synchronously the region still holds the old count — the new one is debounced.
+  expect(status.textContent).toBe("3 results");
+  // It coalesces to the settled count.
+  await waitFor(() => expect(status.textContent).toBe("1 result"));
 });

@@ -9,5 +9,5 @@ export type {
   CombobulateListProps,
   CombobulateRootProps,
 } from "./core/primitives";
-export { useAutocompleteFloating } from "./floating/use-floating";
-export type { UseFloatingOptions, AutocompleteFloating } from "./floating/types";
+export { useCombobulateFloating } from "./floating/use-floating";
+export type { CombobulateFloatingOptions, CombobulateFloating } from "./floating/types";

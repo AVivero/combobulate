@@ -1,9 +1,9 @@
 import type { InputHTMLAttributes, ReactNode } from "react";
-import { Combobulate, type CombobulateApi, useAutocompleteFloating } from "../index";
+import { Combobulate, type CombobulateApi, useCombobulateFloating } from "../src/index";
 
 /**
  * The demos' shared floating shell — the pattern real-world comboboxes use, and
- * combobulate's default in Storybook. Wires `useAutocompleteFloating` +
+ * combobulate's default in Storybook. Wires `useCombobulateFloating` +
  * `Combobulate.Popover` once so each story doesn't repeat it. `closeOnSelect`
  * defaults to single-select behavior (multi-select keeps the list open to pick
  * more). Selection/filter behavior lives in `useDemoCombobox`, whose
@@ -26,7 +26,7 @@ export function FloatingCombobox<T>({
   emptyMessage?: ReactNode;
   maxHeight?: number;
 }) {
-  const floating = useAutocompleteFloating(api, { closeOnSelect: !api.multiple });
+  const floating = useCombobulateFloating(api, { closeOnSelect: !api.multiple });
   return (
     <Combobulate.Root api={api} label={label}>
       <Combobulate.Input
