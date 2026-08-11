@@ -1,5 +1,13 @@
 import * as Ariakit from "@ariakit/react";
-import { type ReactNode, createContext, forwardRef, useContext, useEffect, useState } from "react";
+import {
+  type ReactNode,
+  createContext,
+  forwardRef,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { CombobulateProvider, useCombobulateContext } from "./context";
 import { isSameItem } from "./item-utils";
 import type { CombobulateStoreInternal } from "./store";
@@ -85,6 +93,20 @@ const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputEl
   function Input(props, ref) {
     const store = useCombobulateContext();
     const label = useContext(LabelContext);
+    // Dev guardrail: a combobox MUST have an accessible name, or a screen reader
+    // announces only "combobox" with no purpose. Warn (dev only) when none is
+    // supplied by any route — root `label`, or `aria-label`/`aria-labelledby` on
+    // the Input. The effect is always called (guard inside) to keep hook order
+    // stable; deps are the name inputs so it re-checks if they change.
+    const hasAccessibleName =
+      label != null || props["aria-label"] != null || props["aria-labelledby"] != null;
+    useEffect(() => {
+      if (process.env.NODE_ENV === "production" || hasAccessibleName) return;
+      console.warn(
+        "combobulate: the combobox has no accessible name. Pass `label` on " +
+          "<Combobulate>, or `aria-label`/`aria-labelledby` on <Combobulate.Input>.",
+      );
+    }, [hasAccessibleName]);
     return (
       <Ariakit.Combobox
         {...props}
@@ -293,24 +315,53 @@ function LiveRegion() {
   const isOpen = store.useState("isOpen");
   const loading = store.useState("loading");
   const filteredItems = store.useState("filteredItems");
+  const multiple = store.useState("multiple");
+  const selectedItems = store.useState("selectedItems");
   // Closed is checked first: a closed combobox announces nothing, even while
   // `loading` — its live region is not on screen to narrate.
-  const announcement = !isOpen
+  const countMessage = !isOpen
     ? ""
     : loading
       ? "Loading…"
       : filteredItems.length === 0
         ? "No results"
         : `${filteredItems.length} result${filteredItems.length === 1 ? "" : "s"}`;
-  const [message, setMessage] = useState(announcement);
+  const [message, setMessage] = useState(countMessage);
+
+  /**
+   * One announcer for two kinds of update, so a selection confirmation and a
+   * debounced count can't clobber each other:
+   * - Multi-select selection changes announce IMMEDIATELY — a pick/removal
+   *   changes neither the input nor the result count, so the count alone would
+   *   stay silent. Single-select is excluded: its confirmation is the input
+   *   filling with the chosen label.
+   * - Result-count changes announce DEBOUNCED, so fast typing doesn't flood the
+   *   polite queue; clearing (on close) is immediate.
+   * When a selection change interrupts a pending count, this effect re-runs and
+   * React's cleanup clears that timer first — so the selection message wins.
+   */
+  const prevSelected = useRef(selectedItems.length);
+  const prevCount = useRef(countMessage);
   useEffect(() => {
-    if (announcement === "") {
+    const selectionChanged = multiple && selectedItems.length !== prevSelected.current;
+    prevSelected.current = selectedItems.length;
+    const countChanged = countMessage !== prevCount.current;
+    prevCount.current = countMessage;
+    if (selectionChanged) {
+      setMessage(
+        selectedItems.length === 0 ? "Selection cleared" : `${selectedItems.length} selected`,
+      );
+      return;
+    }
+    if (countMessage === "") {
       setMessage("");
       return;
     }
-    const id = setTimeout(() => setMessage(announcement), ANNOUNCE_DEBOUNCE_MS);
-    return () => clearTimeout(id);
-  }, [announcement]);
+    if (countChanged) {
+      const id = setTimeout(() => setMessage(countMessage), ANNOUNCE_DEBOUNCE_MS);
+      return () => clearTimeout(id);
+    }
+  }, [countMessage, selectedItems, multiple]);
   return (
     // `<output>` carries an implicit `role="status"` (see `Empty` above),
     // satisfying Biome's `useSemanticElements` rule.

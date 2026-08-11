@@ -64,6 +64,8 @@ test("store: itemValue is the id verbatim; activeIndex maps back", () => {
 
 test("store: onInputKeyDown ArrowDown advances activeIndex via the default requestActive", () => {
   const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
+  // Navigation requires an open popup (closed, arrows only OPEN it).
+  act(() => store.setOpen(true));
   act(() => store.setActiveValue(store.itemValue("Paris")));
   expect(store.getState().activeIndex).toBe(0);
 
@@ -142,6 +144,8 @@ test("store: setOpen fires onOpenChange on a real transition", () => {
 
 test("store: onInputKeyDown Ctrl+End jumps to the last item", () => {
   const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
+  // Navigation requires an open popup (closed, arrows only OPEN it).
+  act(() => store.setOpen(true));
   act(() => store.setActiveValue(store.itemValue("Paris")));
 
   const event = keyEvent("End", { ctrlKey: true });
@@ -280,4 +284,23 @@ test("store: setSelectedValue refreshes committed input when closed, not when op
   act(() => store.setInputValue("mad"));
   act(() => store._internal.setSelectedValue(["Berlin"]));
   expect(store.getState().inputValue).toBe("mad");
+});
+
+test("store: ArrowDown on a closed popup opens it (WAI-ARIA reopen)", () => {
+  const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
+  expect(store.getState().isOpen).toBe(false);
+  act(() => store.onInputKeyDown(keyEvent("ArrowDown") as never));
+  expect(store.getState().isOpen).toBe(true);
+});
+
+test("store: ArrowUp on a closed popup opens it", () => {
+  const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
+  act(() => store.onInputKeyDown(keyEvent("ArrowUp") as never));
+  expect(store.getState().isOpen).toBe(true);
+});
+
+test("store: a non-open nav key on a closed popup leaves it closed", () => {
+  const store = createCombobulateStore({ items: ITEMS, getItemId: (c) => c });
+  act(() => store.onInputKeyDown(keyEvent("End", { ctrlKey: true }) as never));
+  expect(store.getState().isOpen).toBe(false);
 });

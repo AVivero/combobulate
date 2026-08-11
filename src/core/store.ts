@@ -469,6 +469,21 @@ export function createCombobulateStore<T>(
    */
   const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     const state = getState();
+    /**
+     * Closed popup: ArrowDown/ArrowUp OPEN it (WAI-ARIA APG — "if the popup is
+     * available but not displayed, displays the popup"). combobulate owns these
+     * keys and stops their propagation, so Ariakit can't open the list itself;
+     * we must. Other owned nav keys do nothing while closed — return without
+     * touching the event so the browser handles them (e.g. Home/End caret).
+     */
+    if (!state.isOpen) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        event.stopPropagation();
+        setOpen(true);
+      }
+      return;
+    }
     const target = nextIndex(state.activeIndex, event, {
       count: state.filteredItems.length,
       page: PAGE_SIZE,

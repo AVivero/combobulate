@@ -40,6 +40,7 @@ export function MultiControlled() {
           <button
             key={airport.iata}
             type="button"
+            aria-label={`Remove ${airport.iata}`}
             onClick={() => store.select(airport)}
             className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700"
           >

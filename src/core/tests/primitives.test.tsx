@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, expect, spyOn, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { stubElementLayout } from "../../test-utils/stub-element-layout";
 import { Combobulate } from "../primitives";
@@ -215,4 +215,32 @@ test("Item forwards className to the option element (for state styling)", () => 
   }
   render(<Styled />);
   expect(screen.getByRole("option", { name: "Paris" }).className).toContain("opt-x");
+});
+
+test("LiveRegion announces multi-select selection changes", () => {
+  render(<Harness items={["Paris", "Berlin"]} multiple />);
+  const status = screen.getByRole("status");
+  expect(status.textContent).toBe("2 results");
+  fireEvent.click(screen.getByRole("option", { name: "Paris" }));
+  expect(status.textContent).toBe("1 selected");
+  fireEvent.click(screen.getByRole("option", { name: "Berlin" }));
+  expect(status.textContent).toBe("2 selected");
+  fireEvent.click(screen.getByRole("option", { name: "Paris" })); // toggle off
+  expect(status.textContent).toBe("1 selected");
+});
+
+test("dev: warns when the combobox has no accessible name", () => {
+  const warn = spyOn(console, "warn").mockImplementation(() => {});
+  function Unlabeled() {
+    const store = useCombobulate({ items: ["Paris"] });
+    return (
+      <Combobulate store={store}>
+        <Combobulate.Input />
+      </Combobulate>
+    );
+  }
+  render(<Unlabeled />);
+  const warned = warn.mock.calls.some((args) => String(args[0]).includes("no accessible name"));
+  expect(warned).toBe(true);
+  warn.mockRestore();
 });
