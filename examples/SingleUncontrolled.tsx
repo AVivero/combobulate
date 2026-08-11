@@ -39,7 +39,7 @@ export function SingleUncontrolled() {
           onFocus={onFocus}
           aria-label="Airport"
           placeholder="Search ~3,300 airports…"
-          className="w-full rounded-md border border-zinc-300 px-2.5 py-2 text-sm text-zinc-900 outline-none focus:border-indigo-500"
+          className="w-full rounded-md border border-zinc-300 px-2.5 py-2 text-sm text-zinc-900 outline-none focus:border-indigo-500 text-ellipsis"
         />
         <Combobulate.Popover
           floating={floating}

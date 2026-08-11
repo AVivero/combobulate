@@ -40,7 +40,7 @@ function Field({
         {...floating.referenceProps}
         aria-label={label}
         placeholder={`${label}…`}
-        className="w-full rounded-md border border-zinc-300 px-2.5 py-2 text-sm text-zinc-900 outline-none focus:border-indigo-500"
+        className="w-full rounded-md border border-zinc-300 px-2.5 py-2 text-sm text-zinc-900 outline-none focus:border-indigo-500 text-ellipsis"
       />
       <Combobulate.Popover
         floating={floating}
@@ -75,7 +75,7 @@ function Field({
 export function Booking() {
   const [origin, setOrigin] = useState<Airport | null>(null);
   const [destination, setDestination] = useState<Airport | null>(null);
-  // Dependent list: origins can't equal the chosen destination.
+
   const originItems = useMemo(
     () => (destination ? AIRPORTS.filter((a) => a.iata !== destination.iata) : AIRPORTS),
     [destination],
@@ -84,14 +84,19 @@ export function Booking() {
     () => (origin ? AIRPORTS.filter((a) => a.iata !== origin.iata) : AIRPORTS),
     [origin],
   );
-  const swap = () => {
+
+  /**
+   * Swap the origin and destination airports.
+   * @returns void
+   */
+  function swap(): void {
     setOrigin(destination);
     setDestination(origin);
-  };
+  }
 
   return (
-    <div className="w-[420px] space-y-3">
-      <div className="w-full">
+    <div className="w-[80%] space-y-3">
+      <div className="w-full md:w-1/2">
         <div className="mb-1 text-xs font-medium text-zinc-500">Origin</div>
         <Field label="Origin" value={origin} onChange={setOrigin} items={originItems} />
       </div>
@@ -104,7 +109,7 @@ export function Booking() {
           ⇅ Swap
         </button>
       </div>
-      <div className="w-full">
+      <div className="w-full md:w-1/2">
         <div className="mb-1 text-xs font-medium text-zinc-500">Destination</div>
         <Field
           label="Destination"

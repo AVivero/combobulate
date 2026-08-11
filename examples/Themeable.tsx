@@ -43,7 +43,7 @@ export function Themeable() {
           {...floating.referenceProps}
           aria-label="Airport"
           placeholder="Search ~3,300 airports…"
-          className="w-full border border-zinc-300 px-2.5 py-2 text-sm text-zinc-900 outline-none focus:border-[var(--cbl-accent)]"
+          className="w-full border border-zinc-300 px-2.5 py-2 text-sm text-zinc-900 outline-none focus:border-[var(--cbl-accent)] text-ellipsis"
           style={{ borderRadius: theme.inputRadius, "--cbl-accent": theme.accent } as CSSProperties}
         />
         <Combobulate.Popover
