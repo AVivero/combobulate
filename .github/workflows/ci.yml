@@ -25,3 +25,19 @@ jobs:
       # (see playwright.config `webServer`).
       - run: bunx playwright install --with-deps chromium webkit
       - run: bun run e2e
+
+  # Guard the advertised `react >=18` peer floor. Install React 18 and confirm the
+  # library still typechecks (no React-19-only API crept in) and builds against it.
+  # Runtime behavior is covered by the `test` job's unit + cross-browser e2e on
+  # React 19; the type + build check is what actually catches 18-incompatible API
+  # usage, and it's immune to the react-dom test-harness dedupe quirks that a
+  # runtime downgrade-in-place hits.
+  react18:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun add --dev react@^18.3 react-dom@^18.3 @types/react@^18.3 @types/react-dom@^18.3
+      - run: bun run typecheck
+      - run: bun run build
