@@ -1,0 +1,47 @@
+name: release
+
+# Publishes to npm when you push a version tag, e.g. `git tag v0.1.0 && git push origin v0.1.0`.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance (OIDC)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22" # ships npm 10 (has --provenance)
+          registry-url: "https://registry.npmjs.org"
+      - run: bun install
+
+      # Guard: the tag must match package.json's version (v0.1.0 -> 0.1.0),
+      # so a mistyped tag can't publish a mismatched version.
+      - name: Verify tag matches package.json version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          echo "tag=$TAG package.json=$PKG"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::tag v$TAG does not match package.json version $PKG"
+            exit 1
+          fi
+
+      # Same fast gates as CI, so a bad tag can't publish. (build + publint/attw
+      # run again via the package's prepublishOnly during `npm publish`.)
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun test
+
+      # `npm publish` triggers prepublishOnly (build + publint/attw) as a final
+      # guard, then publishes with provenance. npm (not bun) is used for
+      # --provenance support; it authenticates via the NODE_AUTH_TOKEN below.
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
