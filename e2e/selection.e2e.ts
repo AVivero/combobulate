@@ -74,3 +74,36 @@ test("default filter is a plain substring includes match", async ({ page }) => {
   await expect(options).toHaveCount(1);
   await expect(options.first()).toContainText("Ushuaia");
 });
+
+// Enter selects the active option — combobulate delegates Enter to Ariakit, which
+// re-dispatches a click to the active row (running `store.select`). Keyboard-only
+// users must be able to commit a highlighted option.
+test("Enter selects the active option (keyboard-only)", async ({ page }) => {
+  await page.goto(SINGLE);
+  const input = page.getByRole("combobox");
+  await input.click();
+  await input.fill("hokitika"); // exactly one match: HKK
+  await input.press("ArrowDown"); // highlight it
+  await expect(input).toHaveAttribute("aria-activedescendant", /.+/);
+  await input.press("Enter");
+  await expect(input).toHaveValue(/HKK/); // committed
+});
+
+// Filtering the active option out of the list must not leave a stale
+// `aria-activedescendant` pointing at an unmounted/absent option (an APG
+// violation — the reference must always resolve to a rendered option, or be gone).
+test("filtering out the active option leaves no stale aria-activedescendant", async ({ page }) => {
+  await page.goto(SINGLE);
+  const input = page.getByRole("combobox");
+  await input.click();
+  await input.fill("hokitika");
+  await input.press("ArrowDown"); // highlight the match
+  await expect(input).toHaveAttribute("aria-activedescendant", /.+/);
+  // Narrow the query so nothing matches — the highlighted option is gone.
+  await input.fill("hokitikazzz");
+  await expect(page.getByText("No airports match")).toBeVisible();
+  // Any lingering activedescendant must resolve to a mounted option (here: none,
+  // so it must be cleared) — never a dangling id.
+  const active = await input.getAttribute("aria-activedescendant");
+  if (active) await expect(page.locator(`[id="${active}"]`)).toHaveCount(1);
+});
