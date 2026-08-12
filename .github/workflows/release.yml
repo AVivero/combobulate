@@ -6,7 +6,7 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: read
+  contents: write # create the GitHub Release for the tag
   id-token: write # required for npm provenance (OIDC)
 
 jobs:
@@ -45,3 +45,19 @@ jobs:
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Create the GitHub Release for this tag AFTER a successful publish. Notes
+      # come from the matching `## <version>` section of CHANGELOG.md; if that
+      # section is empty/missing, fall back to auto-generated notes from commits.
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          NOTES="$(awk -v h="## $VERSION" '$0==h{f=1;next} /^## /{if(f)exit} f' CHANGELOG.md)"
+          if [ -n "$(printf '%s' "$NOTES" | tr -d '[:space:]')" ]; then
+            printf '%s\n' "$NOTES" > /tmp/release-notes.md
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file /tmp/release-notes.md --verify-tag
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+          fi
