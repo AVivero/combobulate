@@ -150,13 +150,13 @@ test("LiveRegion is silent while closed, even when loading", () => {
   expect(screen.getByRole("status").textContent).toBe("");
 });
 
-function HighlightHarness() {
+function HighlightHarness({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const store = useCombobulate({
     items: ["Paris", "Berlin", "Madrid"],
     getItemId: (i) => i,
     getInputValue: (i) => i,
     defaultValue: "Berlin",
-    defaultOpen: false,
+    defaultOpen,
   });
   return (
     <Combobulate store={store}>
@@ -180,6 +180,15 @@ test("opening on a committed selection highlights it via the bridge", async () =
   // Focus opens the list; highlight-on-open runs the scroll-then-set bridge to
   // land the active descendant on the chosen row once it mounts.
   fireEvent.focus(input);
+  await waitFor(() => expect(input.getAttribute("aria-activedescendant")).toBe("Berlin"));
+});
+
+test("highlight-on-open also fires on a defaultOpen mount (already open)", async () => {
+  render(<HighlightHarness defaultOpen />);
+  const input = screen.getByRole("combobox");
+  // Mounted already open on a committed selection: the chosen row is the active
+  // descendant without any focus/click — highlight-on-open counts an initial
+  // open as "just opened".
   await waitFor(() => expect(input.getAttribute("aria-activedescendant")).toBe("Berlin"));
 });
 

@@ -3,6 +3,17 @@
 All notable changes to combobulate are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+
+- Highlight-on-open now also fires when the combobox is **mounted already open**
+  (`defaultOpen`) on a committed single-select selection (`getInputValue`): the
+  chosen option becomes the active descendant on mount, matching the
+  focus/click-to-open behavior. (Note: this is a UX consistency improvement, not
+  an accessibility fix — the chosen option always carries `aria-selected`
+  regardless.)
+
 ## 0.0.1
 
 First tagged release.
