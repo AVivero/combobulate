@@ -1,6 +1,6 @@
 name: release
 
-# Publishes to npm when you push a version tag, e.g. `git tag v0.1.0 && git push origin v0.1.0`.
+# Publishes to npm when you push a version tag, e.g. `git tag v0.0.1 && git push origin v0.0.1`.
 on:
   push:
     tags: ["v*"]
@@ -21,7 +21,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - run: bun install
 
-      # Guard: the tag must match package.json's version (v0.1.0 -> 0.1.0),
+      # Guard: the tag must match package.json's version (v0.0.1 -> 0.0.1),
       # so a mistyped tag can't publish a mismatched version.
       - name: Verify tag matches package.json version
         run: |
