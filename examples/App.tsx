@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { Booking } from "./Booking";
+import { FullyThemed } from "./FullyThemed";
 import { MultiControlled } from "./MultiControlled";
 import { MultiUncontrolled } from "./MultiUncontrolled";
 import { SingleControlled } from "./SingleControlled";
@@ -12,6 +13,7 @@ const EXAMPLES = [
   { id: "multi-uncontrolled", label: "Multi · Uncontrolled", Component: MultiUncontrolled },
   { id: "multi-controlled", label: "Multi · Controlled", Component: MultiControlled },
   { id: "themeable", label: "Themeable (CSS-in-JS)", Component: Themeable },
+  { id: "themed", label: "Fully themed", Component: FullyThemed },
   { id: "booking", label: "Linked (booking)", Component: Booking },
 ] as const;
 
