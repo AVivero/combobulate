@@ -102,6 +102,96 @@ full-page search, a sidebar filter)? Skip the floating layer entirely — render
 </Combobulate>
 ```
 
+## Styling & theming
+
+combobulate ships **no styles** — every element is yours. Each primitive forwards
+`className`/`style` (and other attributes) to a real DOM element, and exposes the
+interaction state as attributes you target. Style it however your design system
+works: utility classes, CSS Modules, CSS-in-JS, plain CSS.
+
+### Where styles go
+
+| Element | Styles the… | Notes |
+| --- | --- | --- |
+| `Combobulate.Input` | text input (`role="combobox"`) | any input attribute passes through |
+| `Combobulate.Popover` | floating dropdown card | your `style` first; combobulate's positioning + overflow/height chain wins |
+| `Combobulate.List` | scroll container | list padding, background, a **custom scrollbar**; the scroll/height chain still wins |
+| `Combobulate.Item` | one option row | style its **states** via the attributes below |
+| `Combobulate.Empty` | the "no results" wrapper | |
+| `Combobulate.LiveRegion` | — | visually hidden; leave it alone |
+
+(In the **in-flow** layout there's no `Popover`; `List` is the top surface.)
+
+### Option state attributes
+
+`Item` carries interaction state as attributes — target these instead of tracking
+state yourself:
+
+| Attribute | Meaning |
+| --- | --- |
+| `data-active-item` | the **highlighted** row (hover or keyboard) — the `aria-activedescendant` target |
+| `aria-selected` / `data-chosen` | the **chosen** value (single and multi) |
+| `aria-checked` | chosen, in multi-select |
+
+Target them with attribute selectors — Tailwind variants:
+
+```tsx
+<Combobulate.Item
+  item={item}
+  index={index}
+  className="px-3 py-2 data-[active-item]:bg-indigo-50 aria-selected:font-semibold data-[chosen]:text-indigo-700"
+>
+  {label}
+</Combobulate.Item>
+```
+
+…or plain CSS:
+
+```css
+.option { padding: 8px 12px; }
+.option[data-active-item] { background: #eef2ff; }
+.option[aria-selected="true"] { font-weight: 600; }
+```
+
+### Two strategies, same result
+
+- **Utility classes** — pass `className` with state variants (above).
+- **CSS-in-JS + CSS variables** — drive an accent palette from a JS `theme` object
+  through CSS custom properties that the variants read. Handy for runtime theming
+  (e.g. a light/dark toggle):
+
+  ```tsx
+  <Combobulate.Item
+    item={item}
+    index={index}
+    style={{ "--accent": theme.accent } as React.CSSProperties}
+    className="data-[active-item]:bg-[var(--accent)]"
+  >
+    {label}
+  </Combobulate.Item>
+  ```
+
+### Dark mode
+
+It's your CSS, so dark mode is whatever you already use — Tailwind `dark:`
+variants, or flipping the CSS variables under a `[data-theme="dark"]` selector /
+`prefers-color-scheme`.
+
+### Custom scrollbar & the height chain
+
+`Popover` and `List` manage their own positioning and scroll/overflow/height so
+the list flips and scrolls-to-fit — your `style` is applied first and those
+structural rules win. To theme the scrollbar, put a class on `List` and target its
+pseudo-elements:
+
+```css
+.list::-webkit-scrollbar { width: 10px; }
+.list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 6px; }
+```
+
+See the **Fully themed** example (`#/themed`) for every element styled at once, and
+the **Themeable** example for the CSS-in-JS token approach.
+
 ## Controlled selection
 
 By default the selection is **uncontrolled** — combobulate owns it, seeded by
@@ -230,6 +320,9 @@ full-list-ARIA story that's the reason this exists), floating by default:
   it from outside.
 - **Themeable** — the same control styled with a CSS-in-JS theme (JS tokens + CSS
   variables) instead of utility classes; identical look, different strategy.
+- **Fully themed** — every element styled at once (input, popover, list + custom
+  scrollbar, item states, empty, chips) via className *and* CSS-in-JS + CSS
+  variables, with a light/dark toggle.
 - **Linked (booking)** — two controlled comboboxes with a Swap button and
   origin/destination dependent lists: the payoff of controlled mode.
 
