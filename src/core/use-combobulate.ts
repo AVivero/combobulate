@@ -111,10 +111,12 @@ export function useCombobulate<T>(options: UseCombobulateOptions<T>): Combobulat
 
   // Highlight-on-open: when the list opens on a committed single-select
   // selection (the `getInputValue` model), highlight and scroll to it via
-  // the bridge. Keyed on `isOpen` going true; a no-op for a plain search.
+  // the bridge. Fires on the closed->open transition AND on a mount that is
+  // already open (`defaultOpen`) — the ref seeds `false`, so an initial open
+  // counts as "just opened". A no-op for a plain search or an empty selection.
   const selectedItems = store.useState("selectedItems");
   const multiple = store.useState("multiple");
-  const wasOpenRef = useRef(isOpen);
+  const wasOpenRef = useRef(false);
   useEffect(() => {
     const justOpened = isOpen && !wasOpenRef.current;
     wasOpenRef.current = isOpen;
