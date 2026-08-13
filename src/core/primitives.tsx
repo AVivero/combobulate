@@ -152,13 +152,16 @@ const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputEl
   },
 );
 
-/** Props for {@link Combobulate}'s `List` component. */
+/** Props for {@link Combobulate}'s `List` component. `className`/`style` (and
+ * other attributes) are forwarded to the scroll container — the element you
+ * style for a custom scrollbar, list padding, or background. combobulate's
+ * scroll/flex/height chain still wins so the list scrolls-to-fit. */
 export type CombobulateListProps<T> = {
   /** Render-prop invoked once per visible (virtualized) item. */
   children: (item: T, index: number) => ReactNode;
   /** Max height (px) of the scroll viewport. Default 300. */
   maxHeight?: number;
-};
+} & Omit<React.HTMLAttributes<HTMLDivElement>, "children">;
 
 /**
  * Virtualized scroll container. Ariakit's `<ComboboxList>` supplies the listbox
@@ -166,7 +169,7 @@ export type CombobulateListProps<T> = {
  * The virtualizer and scroll ref ride on the store internals (injected by the
  * hook), so this reads everything from the store handle alone.
  */
-function List<T>({ children, maxHeight = 300 }: CombobulateListProps<T>) {
+function List<T>({ children, maxHeight = 300, style, ...rest }: CombobulateListProps<T>) {
   const store = useCombobulateContext<T>();
   const isOpen = store.useState("isOpen");
   const filteredItems = store.useState("filteredItems");
@@ -178,8 +181,12 @@ function List<T>({ children, maxHeight = 300 }: CombobulateListProps<T>) {
       style={{ display: "flex", flexDirection: "column", flex: "0 1 auto", minHeight: 0 }}
     >
       <div
+        {...rest}
         ref={scrollRef as React.Ref<HTMLDivElement>}
         style={{
+          // Consumer style first; the scroll/flex/height chain below wins so the
+          // list scrolls-to-fit rather than being clipped when the popover flips.
+          ...style,
           overflow: "auto",
           position: "relative",
           // Cap at the requested max, but flex-shrink below it to fit when the
@@ -287,13 +294,16 @@ function Item<T>({ item, index, children, ...rest }: CombobulateItemProps<T>) {
  * second one (e.g. via `<output>`, which carries an implicit `role="status"`)
  * would announce "No results" twice. A plain `<div>` with no role also lints
  * clean, since Biome's `useSemanticElements` only fires when a `role` is set.
+ * `className`/`style` (and other attributes) are forwarded to that `<div>`.
  */
-function Empty({ children }: { children: ReactNode }) {
+export type CombobulateEmptyProps = React.HTMLAttributes<HTMLDivElement>;
+
+function Empty({ children, ...rest }: CombobulateEmptyProps) {
   const store = useCombobulateContext();
   const isOpen = store.useState("isOpen");
   const filteredItems = store.useState("filteredItems");
   if (!isOpen || filteredItems.length > 0) return null;
-  return <div>{children}</div>;
+  return <div {...rest}>{children}</div>;
 }
 
 /**
