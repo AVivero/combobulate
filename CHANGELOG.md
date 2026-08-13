@@ -5,6 +5,15 @@ All notable changes to combobulate are documented here. This project adheres to
 
 ## Unreleased
 
+### Added
+
+- `Combobulate.List` and `Combobulate.Empty` now forward `className`/`style` (and
+  other attributes): the list **scroll container** (custom scrollbar, list padding,
+  background) and the empty-state wrapper are now styleable, alongside
+  `Input`/`Item`/`Popover`. combobulate's scroll/overflow/height chain still wins on
+  `List`. New README **"Styling & theming"** guide (per-element hooks, the option
+  state attributes, both strategies, dark mode) and a **"Fully themed"** example.
+
 ### Fixed
 
 - Highlight-on-open now also fires when the combobox is **mounted already open**

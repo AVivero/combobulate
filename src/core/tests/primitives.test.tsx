@@ -253,3 +253,59 @@ test("dev: warns when the combobox has no accessible name", () => {
   expect(warned).toBe(true);
   warn.mockRestore();
 });
+
+test("List forwards className/style to the scroll container; structural styles win", () => {
+  function Styled() {
+    const store = useCombobulate({
+      items: ["Paris", "Berlin"],
+      defaultOpen: true,
+      getItemId: (i) => i,
+    });
+    return (
+      <Combobulate store={store}>
+        <Combobulate.Input aria-label="Search" />
+        <Combobulate.List<string>
+          className="cbl-scroll"
+          style={{ paddingTop: "13px", overflow: "hidden" }}
+        >
+          {(item, index) => (
+            <Combobulate.Item item={item} index={index}>
+              {item}
+            </Combobulate.Item>
+          )}
+        </Combobulate.List>
+      </Combobulate>
+    );
+  }
+  const { container } = render(<Styled />);
+  const scroll = container.querySelector<HTMLElement>(".cbl-scroll");
+  expect(scroll).not.toBeNull();
+  expect(scroll?.style.paddingTop).toBe("13px"); // consumer style applied
+  expect(scroll?.style.overflow).toBe("auto"); // combobulate's overflow wins over "hidden"
+});
+
+test("Empty forwards className/style to its wrapper", () => {
+  function EmptyStyled() {
+    const store = useCombobulate({ items: [] as string[], defaultOpen: true, getItemId: (i) => i });
+    return (
+      <Combobulate store={store}>
+        <Combobulate.Input aria-label="Search" />
+        <Combobulate.List<string>>
+          {(item, index) => (
+            <Combobulate.Item item={item} index={index}>
+              {item}
+            </Combobulate.Item>
+          )}
+        </Combobulate.List>
+        <Combobulate.Empty className="cbl-empty" style={{ paddingTop: "7px" }}>
+          Nothing here
+        </Combobulate.Empty>
+      </Combobulate>
+    );
+  }
+  const { container } = render(<EmptyStyled />);
+  const empty = container.querySelector<HTMLElement>(".cbl-empty");
+  expect(empty).not.toBeNull();
+  expect(empty?.textContent).toBe("Nothing here");
+  expect(empty?.style.paddingTop).toBe("7px");
+});

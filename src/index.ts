@@ -4,6 +4,7 @@ import { Popover } from "./floating/floating-primitives";
 export { useCombobulate } from "./core/use-combobulate";
 export type { CombobulateStore, UseCombobulateOptions } from "./core/types";
 export type {
+  CombobulateEmptyProps,
   CombobulateItemProps,
   CombobulateListProps,
   CombobulateRootProps,
