@@ -38,7 +38,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "prepublishOnly": "bun run build && bun run check:packaging",
+    "prepublishOnly": "bun run build",
     "check:packaging": "publint && attw --pack",
     "typecheck": "tsc --noEmit",
     "test": "bun test",

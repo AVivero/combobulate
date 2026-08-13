@@ -38,10 +38,15 @@ jobs:
       - run: bun run lint
       - run: bun run typecheck
       - run: bun test
+      - run: bun run build
+      # Packaging gate BEFORE publish. `attw --pack` packs its own tarball, which
+      # collides with npm's packing if run inside `npm publish` (prepublishOnly) —
+      # so it runs here as a standalone step instead.
+      - run: bun run check:packaging
 
-      # `npm publish` triggers prepublishOnly (build + publint/attw) as a final
-      # guard, then publishes with provenance. npm (not bun) is used for
-      # --provenance support; it authenticates via the NODE_AUTH_TOKEN below.
+      # `npm publish` triggers prepublishOnly (a fresh `bun run build`) then
+      # publishes with provenance. npm (not bun) is used for --provenance support;
+      # it authenticates via the NODE_AUTH_TOKEN below.
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
