@@ -3,7 +3,7 @@
 All notable changes to combobulate are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.0.2
 
 ### Added
 

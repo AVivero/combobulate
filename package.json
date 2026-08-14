@@ -1,6 +1,6 @@
 {
   "name": "combobulate-react",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "The headless toolkit for accessible, virtualized autocompletes.",
   "license": "MIT",
   "keywords": ["autocomplete", "combobox", "headless", "virtualized", "accessible", "react"],
