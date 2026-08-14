@@ -98,8 +98,7 @@ export function FullyThemed() {
         <button
           type="button"
           onClick={() => setMode((m) => (m === "light" ? "dark" : "light"))}
-          className="rounded-md px-2.5 py-1 text-xs font-medium"
-          style={{ background: "var(--cbl-accent-soft)", color: "var(--cbl-accent-text)" }}
+          className="cursor-pointer rounded-md border border-[color:var(--cbl-border)] bg-[var(--cbl-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--cbl-text)] shadow-sm transition-colors hover:bg-[var(--cbl-accent-soft)] hover:text-[color:var(--cbl-accent-text)] active:translate-y-px"
         >
           {mode === "light" ? "🌙 Dark" : "☀️ Light"}
         </button>
